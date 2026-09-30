@@ -1,0 +1,14 @@
+actual,predicted,probability_malicious,feature,feature_value,shap_value
+0,1,0.9951,url_punct_char_count,11.0,1.237845
+0,1,0.9951,external_link_count,0.0,0.76828265
+0,1,0.9951,script_entropy,0.0,0.73831713
+0,1,0.9951,embedded_js_count,0.0,0.69108206
+0,1,0.9951,form_count,1.0,0.6044849
+0,1,0.9951,url_digit_count,7.0,0.5308122
+0,1,0.9951,internal_link_count,5.0,0.2699231
+0,1,0.9951,min_link_length,11.0,0.21461485
+0,1,0.9951,html_whitespace_ratio,0.099882491,0.11493941
+0,1,0.9951,whitespace_ratio,0.418981481,0.08155797
+0,1,0.9951,total_script_characters,0.0,0.047403883
+0,1,0.9951,tag_count,71.0,0.042384107
+0,1,0.9951,entropy,5.020702558,-0.042034775

@@ -1,0 +1,14 @@
+column,kind,missing_count,missing_pct,action
+url_punct_char_count,numeric,0,0.0,none needed
+tag_count,numeric,0,0.0,none needed
+whitespace_ratio,numeric,0,0.0,none needed
+entropy,numeric,0,0.0,none needed
+form_count,numeric,0,0.0,none needed
+embedded_js_count,numeric,0,0.0,none needed
+html_whitespace_ratio,numeric,0,0.0,none needed
+script_entropy,numeric,0,0.0,none needed
+min_link_length,numeric,0,0.0,none needed
+external_link_count,numeric,0,0.0,none needed
+total_script_characters,numeric,0,0.0,none needed
+internal_link_count,numeric,0,0.0,none needed
+url_digit_count,numeric,0,0.0,none needed

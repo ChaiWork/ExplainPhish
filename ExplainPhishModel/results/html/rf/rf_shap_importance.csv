@@ -1,0 +1,14 @@
+feature,mean_abs_shap
+url_punct_char_count,0.082643029500569
+external_link_count,0.06766930097658272
+embedded_js_count,0.05767847062655917
+tag_count,0.05490832947654747
+internal_link_count,0.047158493885406945
+form_count,0.0389169352612677
+script_entropy,0.03884659216773985
+whitespace_ratio,0.03396121800341049
+total_script_characters,0.02328566203649772
+entropy,0.02236994451300285
+min_link_length,0.02233716558118124
+url_digit_count,0.021097894159506903
+html_whitespace_ratio,0.01864205173109297

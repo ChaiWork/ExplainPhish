@@ -1,0 +1,5 @@
+actual,predicted,probability_malicious,feature,feature_value,shap_value
+0,1,1.0,struct_ContentType,0.0,0.49754510535329055
+0,1,1.0,file_size,162690.0,0.0024548946467095488
+0,1,1.0,struct_PartName,0.0,0.0
+0,1,1.0,struct_pos,0.0,0.0

@@ -1,0 +1,11 @@
+feature,importance
+text_length,0.4740225
+object_count,0.24182753
+file_size,0.08108373
+metadata_size,0.05889354
+total_filters,0.05505274
+title_chars,0.050852153
+stream_count,0.020549927
+entropy_of_streams,0.010639118
+endstream_count,0.0042328164
+valid_pdf_header,0.0028460089

@@ -1,0 +1,10 @@
+feature,importance
+entropy_of_text,0.5396702
+macro_vocab_size,0.28048757
+macro_token_count,0.06603657
+macro_max_line_length,0.05020871
+avg_cell_length,0.035488945
+remote_template_present,0.01502123
+macro_arithmetic_operator_count,0.0058078095
+numeric_cell_count,0.004642664
+string_cell_count,0.002636266

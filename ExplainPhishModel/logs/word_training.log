@@ -1,0 +1,45 @@
+20:56:33 | INFO | ======================================================================
+20:56:33 | INFO | ExplainPhish pipeline - format: Word
+20:56:33 | INFO | ======================================================================
+20:56:33 | INFO | Loaded Word_Top10_Features.csv: 20000 rows x 12 columns
+20:56:33 | INFO | Label column detected: 'label'
+20:56:33 | INFO | Label distribution after normalisation: {0: 10000, 1: 10000} (0=Benign, 1=Malicious)
+20:56:33 | INFO | Exact duplicate rows removed: 0
+20:56:33 | INFO | Duplicate feature rows removed: 3395
+20:56:33 | INFO | Missing cells: 0 in 0 columns
+20:56:33 | INFO | Constant columns removed: []
+20:56:33 | INFO | Leakage remove threshold overridden for 'word': 1.001 (global=0.985)
+20:56:33 | WARNING | Possible leakage: ole_object_count (single-feature AUC = 1.0)
+20:56:33 | WARNING | Possible leakage: ole_object_type_count (single-feature AUC = 1.0)
+20:56:33 | WARNING | Possible leakage: macro_present (single-feature AUC = 0.99992)
+20:56:33 | WARNING | Possible leakage: dde_present (single-feature AUC = 0.9997)
+20:56:33 | WARNING | Possible leakage: vba_keywords_count (single-feature AUC = 0.99995)
+20:56:33 | WARNING | Possible leakage: entropy (single-feature AUC = 0.99972)
+20:56:33 | WARNING | Possible leakage: struct_ContentType (single-feature AUC = 0.99784)
+20:56:33 | WARNING | Possible leakage: struct_PartName (single-feature AUC = 0.99589)
+20:56:33 | WARNING | Possible leakage: file_size (single-feature AUC = 0.99101)
+20:56:33 | WARNING | Possible leakage: struct_pos (single-feature AUC = 0.98462)
+20:56:33 | INFO | Columns containing IQR outliers (kept, see suspicious_outliers.csv): 1
+20:56:33 | INFO | Stabilization finished: 20000 -> 16605 rows, 12 -> 10 feature columns
+20:56:33 | INFO | Original class distribution: Benign=6605 (39.78%), Malicious=10000 (60.22%)
+20:56:33 | INFO | Not balanced -> undersampled majority class to 6605 rows.
+20:56:33 | INFO | Final class distribution: Benign=6605, Malicious=6605
+20:56:33 | INFO | Split: train=7926, test=5284 (test set is untouched until final evaluation)
+20:56:33 | INFO | Feature selection mode B: ranking 10 features on TRAINING data, keeping top 10.
+20:56:34 | INFO | Selected features: ['ole_object_count', 'ole_object_type_count', 'vba_keywords_count', 'macro_present', 'dde_present', 'entropy', 'struct_ContentType', 'struct_PartName', 'file_size', 'struct_pos']
+20:56:34 | INFO | --- XGBoost ---
+20:56:39 | INFO |   best params for xgb: {'learning_rate': 0.05, 'max_depth': 3, 'n_estimators': 200}
+20:56:39 | INFO |   5-fold CV F1 = 1.0 +/- 0.0
+20:56:40 | INFO |   TEST: acc=0.9998 recall=0.9996 FPR=0.0000 AUC=1.0000
+20:56:42 | INFO |   SHAP outputs saved for xgb
+20:56:42 | INFO | --- Random Forest ---
+20:57:02 | INFO |   best params for rf: {'max_depth': None, 'n_estimators': 100}
+20:57:03 | INFO |   5-fold CV F1 = 1.0 +/- 0.0
+20:57:04 | INFO |   TEST: acc=1.0000 recall=1.0000 FPR=0.0000 AUC=1.0000
+20:57:05 | INFO |   SHAP outputs saved for rf
+20:57:05 | INFO | --- Decision Tree ---
+20:57:06 | INFO |   best params for dt: {'max_depth': 5, 'min_samples_leaf': 1}
+20:57:06 | INFO |   5-fold CV F1 = 1.0 +/- 0.0
+20:57:06 | INFO |   TEST: acc=1.0000 recall=1.0000 FPR=0.0000 AUC=1.0000
+20:57:07 | INFO |   SHAP outputs saved for dt
+20:57:07 | INFO | Finished Word in 34.514s. Results: D:\codingProject\ExplainPhish\ExplainPhishModel\results\word

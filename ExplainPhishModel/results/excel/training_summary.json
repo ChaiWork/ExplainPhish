@@ -1,0 +1,234 @@
+{
+  "format": "excel",
+  "random_state": 42,
+  "stabilization": {
+    "rows_before_cleaning": 20000,
+    "rows_after_cleaning": 12024,
+    "columns_before_cleaning": 12,
+    "columns_after_cleaning": 9,
+    "exact_duplicates_removed": 0,
+    "feature_duplicates_removed": 7976,
+    "conflicting_label_rows": 0,
+    "total_missing_cells": 0,
+    "columns_with_missing": 0,
+    "label_column": "label"
+  },
+  "class_balance": {
+    "before": {
+      "benign": 10000,
+      "malicious": 2024
+    },
+    "malicious_share_before": 0.1683,
+    "method": "random undersampling of majority class (seed 42)",
+    "after": {
+      "benign": 2024,
+      "malicious": 2024
+    }
+  },
+  "split": {
+    "train_size": 2428,
+    "test_size": 1620,
+    "train_malicious": 1214,
+    "test_malicious": 810
+  },
+  "feature_selection": {
+    "mode": "own (train-only importance + SHAP)",
+    "n_features": 9,
+    "score_columns": [
+      "xgb_importance",
+      "rf_importance",
+      "xgb_mean_abs_shap"
+    ],
+    "selected_features": [
+      "entropy_of_text",
+      "macro_vocab_size",
+      "macro_max_line_length",
+      "macro_token_count",
+      "macro_arithmetic_operator_count",
+      "numeric_cell_count",
+      "string_cell_count",
+      "remote_template_present",
+      "avg_cell_length"
+    ]
+  },
+  "models": {
+    "xgb": {
+      "best_params_from_cv": {
+        "learning_rate": 0.05,
+        "max_depth": 3,
+        "n_estimators": 200
+      },
+      "cv_seconds": 0.556,
+      "cv_accuracy_mean": 0.9984,
+      "cv_accuracy_std": 0.0015,
+      "cv_precision_mean": 0.9975,
+      "cv_precision_std": 0.002,
+      "cv_recall_mean": 0.9992,
+      "cv_recall_std": 0.0016,
+      "cv_f1_mean": 0.9984,
+      "cv_f1_std": 0.0015,
+      "cv_roc_auc_mean": 1.0,
+      "cv_roc_auc_std": 0.0001,
+      "train_seconds": 0.095,
+      "parameters": {
+        "objective": "binary:logistic",
+        "base_score": null,
+        "booster": null,
+        "callbacks": null,
+        "colsample_bylevel": null,
+        "colsample_bynode": null,
+        "colsample_bytree": 0.8,
+        "device": null,
+        "early_stopping_rounds": null,
+        "enable_categorical": true,
+        "eval_metric": "logloss",
+        "feature_types": null,
+        "feature_weights": null,
+        "gamma": null,
+        "grow_policy": null,
+        "importance_type": null,
+        "interaction_constraints": null,
+        "learning_rate": 0.05,
+        "max_bin": null,
+        "max_cat_threshold": null,
+        "max_cat_to_onehot": null,
+        "max_delta_step": null,
+        "max_depth": 3,
+        "max_leaves": null,
+        "min_child_weight": null,
+        "missing": NaN,
+        "monotone_constraints": null,
+        "multi_strategy": null,
+        "n_estimators": 200,
+        "n_jobs": -1,
+        "num_parallel_tree": null,
+        "random_state": 42,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.5,
+        "sampling_method": null,
+        "scale_pos_weight": null,
+        "subsample": 0.85,
+        "tree_method": null,
+        "validate_parameters": null,
+        "verbosity": null
+      }
+    },
+    "rf": {
+      "best_params_from_cv": {
+        "max_depth": null,
+        "n_estimators": 200
+      },
+      "cv_seconds": 3.923,
+      "cv_accuracy_mean": 0.9988,
+      "cv_accuracy_std": 0.001,
+      "cv_precision_mean": 0.9975,
+      "cv_precision_std": 0.002,
+      "cv_recall_mean": 1.0,
+      "cv_recall_std": 0.0,
+      "cv_f1_mean": 0.9988,
+      "cv_f1_std": 0.001,
+      "cv_roc_auc_mean": 1.0,
+      "cv_roc_auc_std": 0.0,
+      "train_seconds": 0.614,
+      "parameters": {
+        "bootstrap": true,
+        "ccp_alpha": 0.0,
+        "class_weight": null,
+        "criterion": "gini",
+        "max_depth": null,
+        "max_features": "sqrt",
+        "max_leaf_nodes": null,
+        "max_samples": null,
+        "min_impurity_decrease": 0.0,
+        "min_samples_leaf": 2,
+        "min_samples_split": 2,
+        "min_weight_fraction_leaf": 0.0,
+        "monotonic_cst": null,
+        "n_estimators": 200,
+        "n_jobs": -1,
+        "oob_score": false,
+        "random_state": 42,
+        "verbose": 0,
+        "warm_start": false
+      }
+    },
+    "dt": {
+      "best_params_from_cv": {
+        "max_depth": 5,
+        "min_samples_leaf": 1
+      },
+      "cv_seconds": 0.159,
+      "cv_accuracy_mean": 0.9979,
+      "cv_accuracy_std": 0.0,
+      "cv_precision_mean": 0.9975,
+      "cv_precision_std": 0.002,
+      "cv_recall_mean": 0.9984,
+      "cv_recall_std": 0.002,
+      "cv_f1_mean": 0.9979,
+      "cv_f1_std": 0.0,
+      "cv_roc_auc_mean": 0.9983,
+      "cv_roc_auc_std": 0.0008,
+      "train_seconds": 0.008,
+      "parameters": {
+        "ccp_alpha": 0.0,
+        "class_weight": null,
+        "criterion": "gini",
+        "max_depth": 5,
+        "max_features": null,
+        "max_leaf_nodes": null,
+        "min_impurity_decrease": 0.0,
+        "min_samples_leaf": 1,
+        "min_samples_split": 20,
+        "min_weight_fraction_leaf": 0.0,
+        "monotonic_cst": null,
+        "random_state": 42,
+        "splitter": "best"
+      }
+    }
+  },
+  "test_metrics": [
+    {
+      "Format": "Excel",
+      "Model": "XGBoost",
+      "Accuracy": 0.9994,
+      "Precision": 0.9988,
+      "Recall": 1.0,
+      "F1": 0.9994,
+      "ROC-AUC": 1.0,
+      "FPR": 0.0012,
+      "TN": 809,
+      "FP": 1,
+      "FN": 0,
+      "TP": 810
+    },
+    {
+      "Format": "Excel",
+      "Model": "Random Forest",
+      "Accuracy": 0.9988,
+      "Precision": 0.9975,
+      "Recall": 1.0,
+      "F1": 0.9988,
+      "ROC-AUC": 1.0,
+      "FPR": 0.0025,
+      "TN": 808,
+      "FP": 2,
+      "FN": 0,
+      "TP": 810
+    },
+    {
+      "Format": "Excel",
+      "Model": "Decision Tree",
+      "Accuracy": 0.9981,
+      "Precision": 0.9963,
+      "Recall": 1.0,
+      "F1": 0.9982,
+      "ROC-AUC": 1.0,
+      "FPR": 0.0037,
+      "TN": 807,
+      "FP": 3,
+      "FN": 0,
+      "TP": 810
+    }
+  ],
+  "total_training_seconds": 44.428
+}

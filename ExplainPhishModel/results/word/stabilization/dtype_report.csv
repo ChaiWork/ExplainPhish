@@ -1,0 +1,11 @@
+column,original_dtype,kind,note
+ole_object_count,int64,numeric,
+ole_object_type_count,int64,numeric,
+macro_present,int64,numeric,
+dde_present,int64,numeric,
+vba_keywords_count,int64,numeric,
+entropy,float64,numeric,
+struct_ContentType,int64,numeric,
+struct_PartName,int64,numeric,
+file_size,int64,numeric,
+struct_pos,int64,numeric,

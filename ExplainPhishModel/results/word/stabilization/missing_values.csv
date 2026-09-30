@@ -1,0 +1,11 @@
+column,kind,missing_count,missing_pct,action
+ole_object_count,numeric,0,0.0,none needed
+ole_object_type_count,numeric,0,0.0,none needed
+macro_present,numeric,0,0.0,none needed
+dde_present,numeric,0,0.0,none needed
+vba_keywords_count,numeric,0,0.0,none needed
+entropy,numeric,0,0.0,none needed
+struct_ContentType,numeric,0,0.0,none needed
+struct_PartName,numeric,0,0.0,none needed
+file_size,numeric,0,0.0,none needed
+struct_pos,numeric,0,0.0,none needed

@@ -1,0 +1,11 @@
+actual,predicted,probability_malicious,feature,feature_value,shap_value
+1,1,1.0,vba_keywords_count,2.0,0.5
+1,1,1.0,ole_object_count,32.0,0.0
+1,1,1.0,ole_object_type_count,3.0,0.0
+1,1,1.0,macro_present,1.0,0.0
+1,1,1.0,dde_present,0.0,0.0
+1,1,1.0,entropy,5.326288596345291,0.0
+1,1,1.0,struct_ContentType,0.0,0.0
+1,1,1.0,struct_PartName,0.0,0.0
+1,1,1.0,file_size,189440.0,0.0
+1,1,1.0,struct_pos,0.0,0.0

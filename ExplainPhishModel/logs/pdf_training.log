@@ -1,0 +1,34 @@
+20:55:46 | INFO | ======================================================================
+20:55:46 | INFO | ExplainPhish pipeline - format: PDF
+20:55:46 | INFO | ======================================================================
+20:55:46 | INFO | Loaded PDF_Top10_features.csv: 19296 rows x 20 columns
+20:55:46 | INFO | Label column detected: 'label'
+20:55:46 | INFO | Label distribution after normalisation: {0: 9297, 1: 9999} (0=Benign, 1=Malicious)
+20:55:46 | INFO | Exact duplicate rows removed: 3950
+20:55:46 | INFO | Duplicate feature rows removed: 0
+20:55:46 | INFO | Missing cells: 0 in 0 columns
+20:55:46 | INFO | Constant columns removed: []
+20:55:46 | INFO | Columns containing IQR outliers (kept, see suspicious_outliers.csv): 8
+20:55:46 | INFO | Stabilization finished: 19296 -> 15346 rows, 20 -> 10 feature columns
+20:55:46 | INFO | Original class distribution: Benign=9283 (60.49%), Malicious=6063 (39.51%)
+20:55:46 | INFO | Not balanced -> undersampled majority class to 6063 rows.
+20:55:46 | INFO | Final class distribution: Benign=6063, Malicious=6063
+20:55:46 | INFO | Split: train=7275, test=4851 (test set is untouched until final evaluation)
+20:55:46 | INFO | Feature selection mode B: ranking 10 features on TRAINING data, keeping top 10.
+20:55:47 | INFO | Selected features: ['text_length', 'object_count', 'file_size', 'metadata_size', 'title_chars', 'total_filters', 'entropy_of_streams', 'stream_count', 'endstream_count', 'valid_pdf_header']
+20:55:47 | INFO | --- XGBoost ---
+20:55:56 | INFO |   best params for xgb: {'learning_rate': 0.1, 'max_depth': 3, 'n_estimators': 400}
+20:55:58 | INFO |   5-fold CV F1 = 0.9944 +/- 0.0021
+20:55:58 | INFO |   TEST: acc=0.9940 recall=0.9942 FPR=0.0062 AUC=0.9996
+20:56:01 | INFO |   SHAP outputs saved for xgb
+20:56:01 | INFO | --- Random Forest ---
+20:56:24 | INFO |   best params for rf: {'max_depth': None, 'n_estimators': 100}
+20:56:25 | INFO |   5-fold CV F1 = 0.9928 +/- 0.0019
+20:56:25 | INFO |   TEST: acc=0.9926 recall=0.9930 FPR=0.0078 AUC=0.9986
+20:56:29 | INFO |   SHAP outputs saved for rf
+20:56:29 | INFO | --- Decision Tree ---
+20:56:30 | INFO |   best params for dt: {'max_depth': 12, 'min_samples_leaf': 5}
+20:56:31 | INFO |   5-fold CV F1 = 0.985 +/- 0.0025
+20:56:31 | INFO |   TEST: acc=0.9874 recall=0.9930 FPR=0.0181 AUC=0.9943
+20:56:33 | INFO |   SHAP outputs saved for dt
+20:56:33 | INFO | Finished PDF in 47.342s. Results: D:\codingProject\ExplainPhish\ExplainPhishModel\results\pdf

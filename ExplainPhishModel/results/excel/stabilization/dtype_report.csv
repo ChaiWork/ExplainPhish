@@ -1,0 +1,11 @@
+column,original_dtype,kind,note
+entropy_of_text,float64,numeric,
+macro_chr_count,int64,numeric,
+macro_vocab_size,int64,numeric,
+macro_arithmetic_operator_count,int64,numeric,
+macro_token_count,int64,numeric,
+macro_max_line_length,int64,numeric,
+remote_template_present,int64,numeric,
+numeric_cell_count,int64,numeric,
+string_cell_count,int64,numeric,
+avg_cell_length,float64,numeric,

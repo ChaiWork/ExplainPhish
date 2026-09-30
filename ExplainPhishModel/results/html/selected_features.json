@@ -1,0 +1,24 @@
+{
+  "mode": "own (train-only importance + SHAP)",
+  "n_features": 13,
+  "score_columns": [
+    "xgb_importance",
+    "rf_importance",
+    "xgb_mean_abs_shap"
+  ],
+  "selected_features": [
+    "url_punct_char_count",
+    "external_link_count",
+    "embedded_js_count",
+    "tag_count",
+    "whitespace_ratio",
+    "internal_link_count",
+    "form_count",
+    "script_entropy",
+    "entropy",
+    "total_script_characters",
+    "min_link_length",
+    "url_digit_count",
+    "html_whitespace_ratio"
+  ]
+}

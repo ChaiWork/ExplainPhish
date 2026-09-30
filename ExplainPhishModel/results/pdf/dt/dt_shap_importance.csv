@@ -1,0 +1,11 @@
+feature,mean_abs_shap
+object_count,0.2326613930067245
+text_length,0.15005721650447126
+metadata_size,0.06707655479547957
+title_chars,0.06017324050860782
+file_size,0.0340951210633409
+entropy_of_streams,0.023847939063920732
+total_filters,0.0012470305602525415
+valid_pdf_header,0.0004763749945882555
+stream_count,0.0
+endstream_count,0.0

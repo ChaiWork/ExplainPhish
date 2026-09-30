@@ -1,0 +1,11 @@
+column,kind,missing_count,missing_pct,action
+text_length,numeric,0,0.0,none needed
+total_filters,numeric,0,0.0,none needed
+title_chars,numeric,0,0.0,none needed
+file_size,numeric,0,0.0,none needed
+object_count,numeric,0,0.0,none needed
+stream_count,numeric,0,0.0,none needed
+endstream_count,numeric,0,0.0,none needed
+metadata_size,numeric,0,0.0,none needed
+valid_pdf_header,numeric,0,0.0,none needed
+entropy_of_streams,numeric,0,0.0,none needed

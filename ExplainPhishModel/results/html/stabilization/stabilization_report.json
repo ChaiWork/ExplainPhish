@@ -1,0 +1,104 @@
+{
+  "format": "html",
+  "rows_before_cleaning": 19997,
+  "columns_before_cleaning": 27,
+  "label_column": "label",
+  "label_check": {
+    "raw_label_values": {
+      "1": 9999,
+      "0": 9998
+    },
+    "unexpected_labels": {},
+    "rows_with_unexpected_labels": 0
+  },
+  "exact_duplicates_removed": 0,
+  "id_like_columns_to_review": [],
+  "dtype_counts": {
+    "numeric": 13
+  },
+  "feature_duplicates_removed": 4582,
+  "conflicting_label_rows": 12,
+  "total_missing_cells": 0,
+  "columns_with_missing": 0,
+  "leakage_findings": [],
+  "columns_with_outliers": 12,
+  "rows_after_cleaning": 15403,
+  "columns_after_cleaning": 13,
+  "removed_columns": [
+    {
+      "column": "label",
+      "reason": "target column"
+    },
+    {
+      "column": "__source_file__",
+      "reason": "source file name (would leak the label if files are split by class)"
+    },
+    {
+      "column": "file_name",
+      "reason": "identifier-like column name"
+    },
+    {
+      "column": "Unnamed: 15",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 16",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 17",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 18",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 19",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 20",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 21",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 22",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 23",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 24",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 25",
+      "reason": "pandas index column ('Unnamed')"
+    },
+    {
+      "column": "Unnamed: 26",
+      "reason": "pandas index column ('Unnamed')"
+    }
+  ],
+  "feature_columns": [
+    "url_punct_char_count",
+    "tag_count",
+    "whitespace_ratio",
+    "entropy",
+    "form_count",
+    "embedded_js_count",
+    "html_whitespace_ratio",
+    "script_entropy",
+    "min_link_length",
+    "external_link_count",
+    "total_script_characters",
+    "internal_link_count",
+    "url_digit_count"
+  ]
+}

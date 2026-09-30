@@ -1,0 +1,114 @@
+{
+  "format": "word",
+  "rows_before_cleaning": 20000,
+  "columns_before_cleaning": 12,
+  "label_column": "label",
+  "label_check": {
+    "raw_label_values": {
+      "0": 10000,
+      "1": 10000
+    },
+    "unexpected_labels": {},
+    "rows_with_unexpected_labels": 0
+  },
+  "exact_duplicates_removed": 0,
+  "id_like_columns_to_review": [],
+  "dtype_counts": {
+    "numeric": 10
+  },
+  "feature_duplicates_removed": 3395,
+  "conflicting_label_rows": 0,
+  "total_missing_cells": 0,
+  "columns_with_missing": 0,
+  "leakage_findings": [
+    {
+      "column": "ole_object_count",
+      "check": "single-feature AUC",
+      "value": 1.0,
+      "remove": false
+    },
+    {
+      "column": "ole_object_type_count",
+      "check": "single-feature AUC",
+      "value": 1.0,
+      "remove": false
+    },
+    {
+      "column": "macro_present",
+      "check": "single-feature AUC",
+      "value": 0.99992,
+      "remove": false
+    },
+    {
+      "column": "dde_present",
+      "check": "single-feature AUC",
+      "value": 0.9997,
+      "remove": false
+    },
+    {
+      "column": "vba_keywords_count",
+      "check": "single-feature AUC",
+      "value": 0.99995,
+      "remove": false
+    },
+    {
+      "column": "entropy",
+      "check": "single-feature AUC",
+      "value": 0.99972,
+      "remove": false
+    },
+    {
+      "column": "struct_ContentType",
+      "check": "single-feature AUC",
+      "value": 0.99784,
+      "remove": false
+    },
+    {
+      "column": "struct_PartName",
+      "check": "single-feature AUC",
+      "value": 0.99589,
+      "remove": false
+    },
+    {
+      "column": "file_size",
+      "check": "single-feature AUC",
+      "value": 0.99101,
+      "remove": false
+    },
+    {
+      "column": "struct_pos",
+      "check": "single-feature AUC",
+      "value": 0.98462,
+      "remove": false
+    }
+  ],
+  "columns_with_outliers": 1,
+  "rows_after_cleaning": 16605,
+  "columns_after_cleaning": 10,
+  "removed_columns": [
+    {
+      "column": "label",
+      "reason": "target column"
+    },
+    {
+      "column": "__source_file__",
+      "reason": "source file name (would leak the label if files are split by class)"
+    },
+    {
+      "column": "file_name",
+      "reason": "identifier-like column name"
+    }
+  ],
+  "feature_columns": [
+    "ole_object_count",
+    "ole_object_type_count",
+    "macro_present",
+    "dde_present",
+    "vba_keywords_count",
+    "entropy",
+    "struct_ContentType",
+    "struct_PartName",
+    "file_size",
+    "struct_pos"
+  ]
+}

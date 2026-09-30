@@ -1,0 +1,14 @@
+feature,importance
+url_punct_char_count,0.171871775548458
+tag_count,0.12315334657453272
+external_link_count,0.11638480831270269
+embedded_js_count,0.08328464929622247
+internal_link_count,0.07309450780247694
+whitespace_ratio,0.0724574197718007
+script_entropy,0.06292930328210464
+url_digit_count,0.06009604459995632
+entropy,0.05567565662620191
+total_script_characters,0.055641717181536744
+html_whitespace_ratio,0.05006916586087452
+min_link_length,0.04321817131108981
+form_count,0.03212343383204261

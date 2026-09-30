@@ -1,0 +1,21 @@
+{
+  "mode": "own (train-only importance + SHAP)",
+  "n_features": 10,
+  "score_columns": [
+    "xgb_importance",
+    "rf_importance",
+    "xgb_mean_abs_shap"
+  ],
+  "selected_features": [
+    "ole_object_count",
+    "ole_object_type_count",
+    "vba_keywords_count",
+    "macro_present",
+    "dde_present",
+    "entropy",
+    "struct_ContentType",
+    "struct_PartName",
+    "file_size",
+    "struct_pos"
+  ]
+}

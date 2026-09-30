@@ -1,0 +1,11 @@
+column,kind,missing_count,missing_pct,action
+entropy_of_text,numeric,0,0.0,none needed
+macro_chr_count,numeric,0,0.0,none needed
+macro_vocab_size,numeric,0,0.0,none needed
+macro_arithmetic_operator_count,numeric,0,0.0,none needed
+macro_token_count,numeric,0,0.0,none needed
+macro_max_line_length,numeric,0,0.0,none needed
+remote_template_present,numeric,0,0.0,none needed
+numeric_cell_count,numeric,0,0.0,none needed
+string_cell_count,numeric,0,0.0,none needed
+avg_cell_length,numeric,0,0.0,none needed

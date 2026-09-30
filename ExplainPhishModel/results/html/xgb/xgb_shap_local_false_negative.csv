@@ -1,0 +1,14 @@
+actual,predicted,probability_malicious,feature,feature_value,shap_value
+1,0,0.0016,internal_link_count,205.0,-1.5868582
+1,0,0.0016,url_punct_char_count,1332.0,-1.1025963
+1,0,0.0016,total_script_characters,15112.0,-0.82323366
+1,0,0.0016,external_link_count,31.0,-0.6410584
+1,0,0.0016,entropy,5.010947494,-0.5861238
+1,0,0.0016,script_entropy,5.099163979,-0.48805752
+1,0,0.0016,url_digit_count,174.0,-0.45709375
+1,0,0.0016,embedded_js_count,10.0,-0.4529585
+1,0,0.0016,min_link_length,1.0,-0.29275763
+1,0,0.0016,tag_count,684.0,-0.1538067
+1,0,0.0016,whitespace_ratio,0.592761527,0.083586164
+1,0,0.0016,html_whitespace_ratio,0.180304227,0.028703028
+1,0,0.0016,form_count,1.0,7.0989336e-05
