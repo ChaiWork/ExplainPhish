@@ -1,90 +1,98 @@
 {
   "format": "word",
   "rows_before_cleaning": 20000,
-  "columns_before_cleaning": 12,
+  "columns_before_cleaning": 44,
   "label_column": "label",
   "label_check": {
     "raw_label_values": {
-      "0": 10000,
-      "1": 10000
+      "1": 10000,
+      "0": 10000
     },
     "unexpected_labels": {},
     "rows_with_unexpected_labels": 0
   },
-  "exact_duplicates_removed": 0,
-  "id_like_columns_to_review": [],
+  "exact_duplicates_removed": 3395,
+  "id_like_columns_to_review": [
+    "struct_name"
+  ],
   "dtype_counts": {
-    "numeric": 10
+    "numeric": 43
   },
-  "feature_duplicates_removed": 3395,
+  "feature_duplicates_removed": 0,
   "conflicting_label_rows": 0,
-  "total_missing_cells": 0,
-  "columns_with_missing": 0,
+  "total_missing_cells": 225310,
+  "columns_with_missing": 30,
   "leakage_findings": [
     {
       "column": "ole_object_count",
       "check": "single-feature AUC",
       "value": 1.0,
-      "remove": false
+      "remove": true
     },
     {
       "column": "ole_object_type_count",
       "check": "single-feature AUC",
       "value": 1.0,
-      "remove": false
+      "remove": true
     },
     {
       "column": "macro_present",
       "check": "single-feature AUC",
       "value": 0.99992,
-      "remove": false
+      "remove": true
     },
     {
       "column": "dde_present",
       "check": "single-feature AUC",
       "value": 0.9997,
-      "remove": false
+      "remove": true
     },
     {
       "column": "vba_keywords_count",
       "check": "single-feature AUC",
       "value": 0.99995,
-      "remove": false
+      "remove": true
     },
     {
       "column": "entropy",
       "check": "single-feature AUC",
       "value": 0.99972,
-      "remove": false
+      "remove": true
     },
     {
       "column": "struct_ContentType",
       "check": "single-feature AUC",
       "value": 0.99784,
-      "remove": false
+      "remove": true
     },
     {
       "column": "struct_PartName",
       "check": "single-feature AUC",
       "value": 0.99589,
-      "remove": false
+      "remove": true
     },
     {
       "column": "file_size",
       "check": "single-feature AUC",
       "value": 0.99101,
-      "remove": false
+      "remove": true
     },
     {
       "column": "struct_pos",
       "check": "single-feature AUC",
       "value": 0.98462,
       "remove": false
+    },
+    {
+      "column": "struct_val",
+      "check": "single-feature AUC",
+      "value": 0.98722,
+      "remove": true
     }
   ],
-  "columns_with_outliers": 1,
+  "columns_with_outliers": 0,
   "rows_after_cleaning": 16605,
-  "columns_after_cleaning": 10,
+  "columns_after_cleaning": 25,
   "removed_columns": [
     {
       "column": "label",
@@ -95,20 +103,103 @@
       "reason": "source file name (would leak the label if files are split by class)"
     },
     {
-      "column": "file_name",
-      "reason": "identifier-like column name"
+      "column": "path_/w-p",
+      "reason": "too many missing values"
+    },
+    {
+      "column": "path_w-r",
+      "reason": "too many missing values"
+    },
+    {
+      "column": "path_/w-r",
+      "reason": "too many missing values"
+    },
+    {
+      "column": "path_w-p",
+      "reason": "too many missing values"
+    },
+    {
+      "column": "struct_{http://schemas.openxmlformats.org/wordprocessingml/2006/main}sz",
+      "reason": "too many missing values"
+    },
+    {
+      "column": "struct_{http://schemas.openxmlformats.org/wordprocessingml/2006/main}themeFill",
+      "reason": "too many missing values"
+    },
+    {
+      "column": "struct_{http://schemas.openxmlformats.org/wordprocessingml/2006/main}csb1",
+      "reason": "too many missing values"
+    },
+    {
+      "column": "struct_{http://schemas.openxmlformats.org/wordprocessingml/2006/main}styleId",
+      "reason": "too many missing values"
+    },
+    {
+      "column": "ole_object_count",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "ole_object_type_count",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "macro_present",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "dde_present",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "vba_keywords_count",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "entropy",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "struct_ContentType",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "struct_PartName",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "file_size",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "struct_val",
+      "reason": "leakage: feature alone separates the classes"
     }
   ],
   "feature_columns": [
-    "ole_object_count",
-    "ole_object_type_count",
-    "macro_present",
-    "dde_present",
-    "vba_keywords_count",
-    "entropy",
-    "struct_ContentType",
-    "struct_PartName",
-    "file_size",
-    "struct_pos"
+    "struct_pos",
+    "struct_typeface",
+    "struct_script",
+    "path_a-hlink",
+    "path_a-accent3",
+    "struct_ang",
+    "path_/a-effectLst",
+    "path_a-themeElements",
+    "struct_dist",
+    "path_a-alpha",
+    "struct_Extension",
+    "path_a-dk1",
+    "path_a-ln",
+    "path_/a-accent6",
+    "struct_w",
+    "struct_name",
+    "path_a-lt2",
+    "path_/a-outerShdw",
+    "path_a-accent4",
+    "path_/a-dk1",
+    "path_a-accent1",
+    "path_a-sysClr",
+    "path_a-lt1",
+    "path_/a-accent4",
+    "path_a-solidFill"
   ]
 }

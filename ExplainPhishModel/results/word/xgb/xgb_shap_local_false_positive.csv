@@ -1,5 +1,11 @@
 actual,predicted,probability_malicious,feature,feature_value,shap_value
-0,1,0.9993,struct_ContentType,0.0,3.798413
-0,1,0.9993,file_size,162690.0,2.4832394
-0,1,0.9993,struct_PartName,0.0,1.1557889
-0,1,0.9993,struct_pos,0.0,-0.12046967
+0,1,0.9979,struct_pos,0.0,4.142349
+0,1,0.9979,struct_typeface,0.0,2.6020412
+0,1,0.9979,path_a-hlink,0.0,-0.9833505
+0,1,0.9979,struct_script,0.0,0.6816688
+0,1,0.9979,path_a-accent3,0.0,-0.22514051
+0,1,0.9979,struct_ang,0.0,-0.012650603
+0,1,0.9979,path_/a-effectLst,0.0,0.0
+0,1,0.9979,path_a-alpha,0.0,0.0
+0,1,0.9979,path_/a-accent6,0.0,0.0
+0,1,0.9979,struct_name,0.0,0.0

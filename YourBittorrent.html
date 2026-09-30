@@ -1,0 +1,614 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>YourBittorrent</title><meta name="description" content="YourBittorrent is a fast torrent search engine: millions of verified movies, TV shows, games, music, software and ebooks, sorted by live seeds."><meta name="viewport" content="width=device-width, initial-scale=1"><script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"YourBittorrent","url":"https://yourbittorrent.com/","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://yourbittorrent.com/?q={search_term_string}"},"query-input":"required name=search_term_string"}},{"@type":"Organization","name":"YourBittorrent","url":"https://yourbittorrent.com/","logo":"https://yourbittorrent.com/seed/logo-512.png"}]}</script><meta http-equiv="X-UA-Compatible" content="IE=edge"><script type="78d854b49674f403ef06429e-text/javascript">
+	(function(){try{var t=localStorage.getItem('yb-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+	function ybCurrentTheme(){return document.documentElement.getAttribute('data-theme')||'system';}
+	function ybEffectiveDark(){var t=ybCurrentTheme();if(t==='dark')return true;if(t==='light')return false;return window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;}
+	function ybSetTheme(v){var r=document.documentElement;if(v==='system'){r.removeAttribute('data-theme');try{localStorage.removeItem('yb-theme');}catch(e){}}else{r.setAttribute('data-theme',v);try{localStorage.setItem('yb-theme',v);}catch(e){}}ybSyncTheme();}
+	function ybToggleTheme(){ybSetTheme(ybEffectiveDark()?'light':'dark');}
+	function ybSyncTheme(){var i=document.getElementById('yb-theme-icon');if(i)i.className=ybEffectiveDark()?'fa fa-sun':'fa fa-moon';var c=ybCurrentTheme();var els=document.getElementsByName('yb-theme-choice');for(var k=0;k<els.length;k++)els[k].checked=(els[k].value===c);}
+	document.addEventListener('DOMContentLoaded',ybSyncTheme);
+	</script><link rel="icon" type="image/svg+xml" href="/seed/favicon.svg"><link rel="icon" type="image/png" href="/seed/favicon-32.png" sizes="32x32"><link rel="icon" type="image/png" href="/seed/favicon-16.png" sizes="16x16"><link rel="apple-touch-icon" sizes="180x180" href="/seed/apple-touch-icon.png"><link rel="manifest" href="/manifest.json"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#f11b01"><meta name="theme-color" content="#ffffff"><link rel="alternate" type="application/rss+xml" href="/rss.xml" /><link rel="search" type="application/opensearchdescription+xml" title="YourBittorrent" href="/opensearch.xml"><link href="https://y.t0r.store/static/style4.1.css?v=20260925b" rel="stylesheet"> <link rel="stylesheet" href="https://y.t0r.store/static/fontawesome.css"><style id="yb-revamp">
+	:root{
+		--bg:#f5f6f8; --surface:#fff; --surface-2:#fafbfc; --ink:#1b2027; --muted:#6b7480;
+		--border:#e6e8ec; --border-strong:#d7dae0;
+		--brand:#e42313; --brand-ink:#b81a0d; --brand-soft:#fdecea;
+		--seed:#12925a; --peer:#c6462f; --gold:#c98a12;
+		--radius:12px; --radius-sm:9px;
+		--shadow:0 1px 2px rgba(16,24,40,.05),0 4px 16px rgba(16,24,40,.06);
+		--shadow-lg:0 12px 40px rgba(16,24,40,.14);
+		--mascot-line:transparent;
+	}
+	@media (prefers-color-scheme: dark){
+		:root:not([data-theme="light"]){
+			--bg:#161b26; --surface:#1e2430; --surface-2:#28303f; --ink:#e9edf5; --muted:#9aa6ba;
+			--border:#2f3949; --border-strong:#3d4a5e;
+			--brand:#ff5c4d; --brand-ink:#ff7a6b; --brand-soft:#3a221f;
+			--seed:#34d399; --peer:#ff8f7a; --gold:#ecc357;
+			--shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.42);
+			--shadow-lg:0 18px 50px rgba(0,0,0,.55);
+			--mascot-line:#4a5568;
+		}
+	}
+	:root[data-theme="dark"]{
+		--bg:#161b26; --surface:#1e2430; --surface-2:#28303f; --ink:#e9edf5; --muted:#9aa6ba;
+		--border:#2f3949; --border-strong:#3d4a5e;
+		--brand:#ff5c4d; --brand-ink:#ff7a6b; --brand-soft:#3a221f;
+		--seed:#34d399; --peer:#ff8f7a; --gold:#ecc357;
+		--shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.42);
+		--shadow-lg:0 18px 50px rgba(0,0,0,.55);
+		--mascot-line:#4a5568;
+	}
+	body{
+		font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+		background:var(--bg)!important; color:var(--ink); font-size:14px; line-height:1.5;
+		-webkit-font-smoothing:antialiased; padding-top:66px;
+	}
+	a{color:var(--brand-ink)} a:hover{color:var(--brand-ink)}
+	.container{max-width:1720px}
+
+	/* ---- nav ---- */
+	.yb-nav{background:var(--surface)!important; border-bottom:1px solid var(--border); min-height:60px; box-shadow:0 1px 0 rgba(0,0,0,.02); padding:.4rem 0}
+	.yb-nav .navbar-brand{font-weight:800; letter-spacing:-.02em; color:var(--ink); display:flex; align-items:center; gap:9px; font-size:17px}
+	/* Bootstrap's own .navbar-brand:hover forces a near-black colour, which on the dark layout
+	   made the wordmark almost vanish. Use the theme-aware brand accent instead - it is the same
+	   token the active nav link uses, and it flips per theme (#b81a0d light / #ff7a6b dark). */
+	.yb-nav .navbar-brand:hover,.yb-nav .navbar-brand:focus{color:var(--brand-ink)}
+	.yb-nav .navbar-brand img,.yb-nav .navbar-brand picture{border-radius:7px; box-shadow:0 2px 8px rgba(228,35,19,.35)}
+	.yb-nav .nav-link{color:var(--muted)!important; font-weight:600; border-radius:8px; padding:.45rem .7rem!important}
+	.yb-nav .nav-link:hover{color:var(--ink)!important; background:var(--surface-2)}
+	.yb-nav .nav-item.active .nav-link{color:var(--brand-ink)!important}
+	.yb-nav .navbar-toggler{border-color:var(--border-strong)}
+	.yb-nav .dropdown-menu{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); padding:6px}
+	.yb-nav .dropdown-item{color:var(--ink); border-radius:7px; padding:.5rem .7rem; font-weight:500}
+	.yb-nav .dropdown-item:hover{background:var(--surface-2); color:var(--brand-ink)}
+	/* ---- nav row layout ----
+	   The nav's direct children are ordered by CSS, not by DOM order, so one search form serves
+	   three arrangements:
+	     >=1200  brand | nav links | search | user menu          (links expanded, one row)
+	     768-1199  brand | search | user menu | burger           (links in the burger, one row)
+	     <768    brand | user menu | burger  /  search full width on row 2
+	   The search form and the user menu both sit OUTSIDE #navbar, so neither ever disappears into
+	   the hamburger and the user menu keeps the far right at every width. */
+	.yb-nav .navbar-brand{order:1}
+	/* flex-shrink:0 + nowrap links: at 1200-1279 the row was just short enough that the links ul got
+	   squeezed and "Categories"/"More" wrapped their caret onto a second line, making the bar 72px
+	   tall. Let the search pill absorb the whole shortfall instead — it has room down to 180px. */
+	.yb-nav .navbar-collapse{order:2; flex-shrink:0}
+	.yb-nav .navbar-nav .nav-link{white-space:nowrap}
+	.yb-search{order:3}
+	.yb-navright{order:4}
+	.yb-nav .navbar-toggler{order:5}
+	/* margin-left:auto is what pins the user menu right; above 1200 the collapse grows instead and
+	   pushes it there anyway, so the same rule holds at all three widths */
+	.yb-navright{flex-direction:row; flex-wrap:nowrap; align-items:center; margin-left:auto}
+	.yb-navright .nav-link{padding:.45rem .55rem!important}
+	/* Bootstrap makes .navbar-nav dropdowns position:static below the expand breakpoint, which would
+	   drop the user menu into the header flow instead of floating it. Keep it floating everywhere. */
+	.yb-navright .dropdown-menu{position:absolute; float:none; right:0; left:auto}
+	.yb-uname{vertical-align:middle}
+
+	/* ---- search bar ----
+	   Deliberately NOT using .d-none/.d-md-block anywhere here: Bootstrap declares .d-inline-block
+	   AFTER .d-none, so the old "d-none d-md-block d-inline-block" desktop form stayed visible on
+	   phones and overflowed. Category / verified pickers live on the results page, not in here. */
+	.yb-search{position:relative; margin:0 0 0 14px; flex:0 1 420px; min-width:180px}
+	.yb-search-pill{display:flex; align-items:center; height:40px; background:var(--surface-2); border:1px solid var(--border-strong); border-radius:999px; padding:0 4px 0 6px; transition:border-color .12s, box-shadow .12s, background .12s}
+	.yb-search-pill:focus-within{background:var(--surface); border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft)}
+	.yb-search-q{flex:1 1 auto; min-width:0; border:0; background:transparent; color:var(--ink); font-size:14px; height:34px; padding:0 10px; outline:0; -webkit-appearance:none}
+	.yb-search-q::placeholder{color:var(--muted); opacity:.9}
+	.yb-search-q::-webkit-search-cancel-button,.yb-search-q::-webkit-search-decoration{-webkit-appearance:none; display:none}
+	.yb-search-x{flex:0 0 26px; display:none; align-items:center; justify-content:center; width:26px; height:26px; padding:0; margin-right:2px; border:0; border-radius:50%; background:transparent; color:var(--muted); font-size:12px; cursor:pointer}
+	.yb-search-pill.has .yb-search-x{display:flex}
+	.yb-search-x:hover{background:var(--border); color:var(--ink)}
+	.yb-search-go{flex:0 0 auto; display:flex; align-items:center; justify-content:center; gap:7px; height:32px; min-width:32px; padding:0 12px; border:0; border-radius:999px; background:var(--brand); color:#fff; font-size:13px; font-weight:600; cursor:pointer}
+	.yb-search-go:hover,.yb-search-go:focus{background:var(--brand-ink); color:#fff; outline:0}
+	.yb-search-go span{display:inline}
+	/* recent searches — localStorage only, nothing is sent anywhere (the site logs no searches) */
+	.yb-search-recent{position:absolute; z-index:1031; top:calc(100% + 7px); left:0; right:0; padding:6px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); max-height:56vh; overflow-y:auto}
+	.yb-search-recent[hidden]{display:none}
+	.yb-search-rh{display:flex; align-items:center; justify-content:space-between; padding:3px 9px 6px; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
+	.yb-search-rh button{padding:0; border:0; background:transparent; color:var(--muted); font:inherit; cursor:pointer}
+	.yb-search-rh button:hover{color:var(--brand-ink)}
+	.yb-search-ri{display:flex; align-items:center; gap:10px; width:100%; padding:9px; border:0; border-radius:7px; background:transparent; color:var(--ink); font-size:13.5px; font-weight:500; text-align:left; cursor:pointer}
+	.yb-search-ri:hover{background:var(--surface-2); color:var(--brand-ink)}
+	.yb-search-ri i{flex:0 0 13px; color:var(--muted); font-size:12px}
+	.yb-search-ri span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+	/* ---- category chip strip ---- */
+	.yb-cats{display:flex; gap:8px; overflow-x:auto; padding:6px 0 4px; margin-bottom:16px; -ms-overflow-style:none; scrollbar-width:none}
+	.yb-cats::-webkit-scrollbar{display:none}
+	.yb-chip{white-space:nowrap; display:inline-flex; align-items:center; gap:7px; padding:7px 13px; border-radius:999px; background:var(--surface); border:1px solid var(--border); color:var(--ink); font-weight:600; font-size:13px; text-decoration:none}
+	.yb-chip:hover{border-color:var(--brand); color:var(--brand-ink); text-decoration:none}
+	.yb-chip i{font-size:13px}
+	.yb-chip.active{background:var(--brand); border-color:var(--brand); color:#fff}
+
+	/* ---- buttons ---- */
+	.btn{border-radius:9px; font-weight:600}
+	.btn-primary{background:var(--brand); border-color:var(--brand)}
+	.btn-primary:hover,.btn-primary:focus{background:var(--brand-ink); border-color:var(--brand-ink); box-shadow:0 0 0 3px var(--brand-soft)}
+	.btn-outline-secondary{border-color:var(--border-strong); color:var(--ink)}
+	.btn-outline-secondary:hover{background:var(--surface-2); color:var(--brand-ink); border-color:var(--brand)}
+
+	/* ---- cards / surfaces ---- */
+	.card{background:var(--surface); color:var(--ink); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow)} /* color: style4.1.css has a legacy prefers-color-scheme:dark block that sets .card{color:#fff} - with the light theme picked on a dark OS that was white on white (09-2026) */
+	/* banner slots: centred in a card with the "log in = no banners" note under the creative (09-2026) */
+	.ad-box{max-width:780px; margin:0 auto 16px; padding:10px 10px 8px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); text-align:center}
+	.ad-box .ad-slot{display:flex; justify-content:center; align-items:center; min-height:90px}
+	.ad-box .ad-note{margin-top:8px; font-size:12px; color:var(--muted)}
+	.ad-box .ad-note a{color:var(--brand-ink); font-weight:600}
+	.alert-secondary{background:var(--surface-2); border:1px solid var(--border); color:var(--muted); border-radius:var(--radius-sm); font-size:13px}
+	.card-header{background:var(--surface-2); border-bottom:1px solid var(--border); font-weight:700; color:var(--ink)}
+	.card-title,.card-text{color:var(--ink)}
+	/* forms (upload / account / static) — theme-aware in light + dark */
+	.form-control,.custom-select,.custom-file-label{background:var(--surface); border:1px solid var(--border-strong); color:var(--ink); border-radius:var(--radius-sm)}
+	.form-control:focus,.custom-select:focus{background:var(--surface); color:var(--ink); border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft)}
+	.form-control::placeholder{color:var(--muted)}
+	/* browser autofill forces a white/pale-blue field background but keeps our text color —
+	   in dark mode that was near-white letters on a white field. Paint the field back with
+	   the theme surface and pin the text color so autofilled logins stay readable. */
+	input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,textarea:-webkit-autofill,select:-webkit-autofill{-webkit-text-fill-color:var(--ink); -webkit-box-shadow:0 0 0 1000px var(--surface) inset; caret-color:var(--ink); transition:background-color 99999s ease-in-out 0s}
+	input:autofill{color:var(--ink)}
+	.form-control-plaintext,label,.col-form-label{color:var(--ink)}
+	.custom-file-label::after{background:var(--surface-2); color:var(--ink); border-left:1px solid var(--border-strong)}
+	.btn-success{background:var(--seed); border-color:var(--seed)}
+	.btn-success:hover{filter:brightness(.95)}
+	kbd{background:var(--ink); color:var(--surface)}
+	/* headings + content tables + legacy alert colors (account / upload / static) */
+	.container h1{font-size:26px; font-weight:800; letter-spacing:-.02em; margin-bottom:14px}
+	.container h2{font-size:22px; font-weight:800; letter-spacing:-.02em}
+	.card-header h4,.card-header h3{margin:0; font-size:16px; font-weight:700}
+	.card-footer{background:var(--surface-2); border-top:1px solid var(--border)}
+	.table{color:var(--ink)}
+	.table th,.table td{border-color:var(--border)}
+	.thead-light th{background:var(--surface-2); color:var(--muted); border-color:var(--border)}
+	legend{font-size:15px; font-weight:700; color:var(--ink); border:0; margin-bottom:12px}
+	.avatar{border-radius:12px}
+	.alert.red{background:var(--brand-soft); border:1px solid var(--brand); color:var(--brand-ink); border-radius:var(--radius-sm)}
+	.alert.yellow{background:rgba(201,138,18,.12); border:1px solid var(--gold); color:var(--gold); border-radius:var(--radius-sm)}
+	.alert.green{background:rgba(18,146,90,.12); border:1px solid var(--seed); color:var(--seed); border-radius:var(--radius-sm)}
+	/* news */
+	.yb-newscard{display:grid; grid-template-columns:210px 1fr; margin-bottom:16px; overflow:hidden}
+	.yb-newsthumb{width:100%; height:100%; min-height:170px; object-fit:cover; display:block; background:var(--surface-2)}
+	.yb-newsbody{padding:18px 20px}
+	.yb-newstitle{font-size:19px; font-weight:800; letter-spacing:-.01em; line-height:1.3; margin:0 0 8px}
+	.yb-newstitle a{color:var(--ink)} .yb-newstitle a:hover{color:var(--brand-ink); text-decoration:none}
+	.yb-newslede{font-weight:600; color:var(--ink); margin:0 0 8px}
+	.yb-newsbody p{color:var(--muted)}
+	.yb-newsmeta{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:14px; color:var(--muted); font-size:12px}
+	@media(max-width:640px){ .yb-newscard{grid-template-columns:1fr} .yb-newsthumb{min-height:190px} }
+	/* clients */
+	.yb-clients{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px}
+	.yb-client{display:flex; flex-direction:column; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); padding:18px}
+	.yb-client-head{display:flex; align-items:center; gap:12px; margin-bottom:10px}
+	.yb-clogo{width:44px; height:44px; border-radius:11px; display:grid; place-items:center; flex:none; box-shadow:var(--shadow); background:#fff; object-fit:contain; padding:6px}
+	.yb-client h3{font-size:16px; font-weight:800; margin:0; display:flex; align-items:center; flex-wrap:wrap}
+	.yb-client .ver{font-size:12px; color:var(--muted); margin-top:1px}
+	.yb-client p{color:var(--muted); font-size:13px; margin:0 0 12px; flex:1}
+	.yb-osbadges{display:flex; flex-wrap:wrap; gap:5px; margin:0 0 14px}
+	.yb-os{font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; background:var(--surface-2); border:1px solid var(--border); color:var(--muted)}
+	.yb-rec{font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:#fff; background:var(--seed); padding:2px 7px; border-radius:999px; margin-left:8px}
+	.yb-steps{margin:0; padding-left:20px} .yb-steps li{margin-bottom:6px}
+	/* settings — theme chooser */
+	.yb-themeopts{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:8px}
+	.yb-themeopt{display:flex; align-items:center; gap:12px; border:1px solid var(--border-strong); border-radius:var(--radius); padding:14px; cursor:pointer; margin:0}
+	.yb-themeopt:hover{border-color:var(--brand)}
+	.yb-themeopt input{accent-color:var(--brand); width:18px; height:18px; flex:none; margin:0}
+	.yb-themeopt:has(input:checked){border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft)}
+	.yb-swatch{width:38px; height:38px; border-radius:9px; display:grid; place-items:center; flex:none; font-size:15px}
+	.yb-swatch.sys{background:linear-gradient(135deg,#f5f6f8 50%,#161b26 50%); color:#8a94a6}
+	.yb-swatch.light{background:#f5f6f8; color:#c98a12; border:1px solid var(--border-strong)}
+	.yb-swatch.dark{background:#161b26; color:#ecc357}
+	.yb-optlabel{display:flex; flex-direction:column; line-height:1.25}
+	.yb-optlabel small{color:var(--muted)}
+	/* contact */
+	.yb-contact-list{list-style:none; margin:0; padding:0}
+	.yb-contact-list li{display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border)}
+	.yb-contact-list li:last-child{border-bottom:0}
+	.yb-contact-list i{width:20px; text-align:center; margin-top:2px; color:var(--brand); flex:none}
+	.yb-contact-list b{display:block}
+	.yb-contact-list span{color:var(--muted); font-size:13px}
+	.yb-flags{display:flex; flex-wrap:wrap; gap:8px}
+	.yb-flag{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); background:var(--surface-2); border:1px solid var(--border); border-radius:999px; padding:4px 11px}
+	.yb-flag img{border-radius:2px}
+	/* error / empty states */
+	.yb-error{max-width:560px; margin:36px auto; text-align:center; padding:20px}
+	.yb-error-icon{width:88px; height:88px; border-radius:22px; margin:0 auto 18px; display:grid; place-items:center; font-size:38px; background:var(--brand-soft); color:var(--brand)}
+	/* Seed, the mascot (templates/seed.tpl): inline SVG, links to /seed.html */
+	.seed{display:inline-block; max-width:100%; line-height:0; vertical-align:middle; transition:transform .2s}
+	.seed svg{width:100%; height:auto; display:block; overflow:visible}
+	a.seed:hover{transform:translateY(-3px) rotate(-2deg)}
+	.seed .sd-line{stroke:var(--mascot-line); stroke-width:2}
+	.sd-led{animation:sd-blink 3.6s infinite}
+	.sd-bob{animation:sd-bob 2.6s ease-in-out infinite}
+	.sd-zz{animation:sd-zz 3.2s ease-in-out infinite}
+	.sd-scan{animation:sd-scan 2.6s ease-in-out infinite alternate}
+	@keyframes sd-blink{0%,75%,100%{opacity:1}85%{opacity:.35}}
+	@keyframes sd-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+	@keyframes sd-zz{0%{opacity:.25;transform:translateY(4px)}50%{opacity:.9}100%{opacity:.25;transform:translateY(-5px)}}
+	@keyframes sd-scan{from{transform:translateX(0)}to{transform:translateX(72px)}}
+	.yb-error .seed{display:block; margin:0 auto 10px}
+	.yb-logo{width:32px; height:32px; flex:none; display:block; border-radius:9px; box-shadow:0 2px 10px rgba(16,24,40,.25)}
+	.yb-logo .sd-scan{animation:none; opacity:0}
+	.yb-nav .navbar-brand:hover .yb-logo .sd-scan{opacity:.8; animation:sd-scan 1.1s ease-in-out infinite alternate}
+	.yb-wm{font-weight:800; letter-spacing:-.03em}
+	.yb-wm i{font-style:normal; font-weight:500; color:var(--muted); letter-spacing:-.01em}
+	.yb-seedbadge{display:inline-flex; align-items:center; gap:8px; color:var(--muted); font-size:13px}
+	.yb-seedbadge .seed{width:34px}
+	@media (prefers-reduced-motion:reduce){.sd-led,.sd-bob,.sd-zz,.sd-scan,.yb-nav .navbar-brand:hover .yb-logo .sd-scan{animation:none}a.seed:hover{transform:none}}
+	.yb-error-code{font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+	.yb-error h1{font-size:26px; font-weight:800; letter-spacing:-.02em; margin:6px 0 10px}
+	.yb-error p{color:var(--muted); margin-bottom:22px}
+	.yb-error-actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+	/* faq accordion (native <details>, no JS) */
+	.yb-faq details{border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); margin-bottom:10px; box-shadow:var(--shadow)}
+	.yb-faq summary{cursor:pointer; padding:14px 16px; font-weight:700; color:var(--ink); list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px}
+	.yb-faq summary::-webkit-details-marker{display:none}
+	.yb-faq summary::after{content:"+"; font-weight:700; color:var(--muted); font-size:20px; line-height:1; flex:none}
+	.yb-faq details[open] summary::after{content:"\2212"}
+	.yb-faq summary:hover{color:var(--brand-ink)}
+	.yb-faq .ans{padding:0 16px 15px; color:var(--muted)}
+	/* stats */
+	.yb-statgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:18px}
+	.yb-bigstat{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px 20px}
+	.yb-bigstat .n{font-size:30px; font-weight:800; letter-spacing:-.02em; line-height:1}
+	.yb-bigstat .l{color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; margin-top:7px}
+	.yb-bigstat .ic{float:right; font-size:20px; opacity:.85}
+	.yb-catbar{display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border)}
+	.yb-catbar:last-child{border-bottom:0}
+	.yb-catbar .nm{width:120px; font-weight:600; display:flex; align-items:center; gap:8px; flex:none}
+	.yb-catbar .track{flex:1; height:8px; border-radius:999px; background:var(--surface-2); overflow:hidden}
+	.yb-catbar .fill{height:100%; border-radius:999px}
+	.yb-catbar .ct{width:88px; text-align:right; font-variant-numeric:tabular-nums; font-weight:700; color:var(--muted); flex:none}
+.yb-catbar.wide .nm{width:auto; flex:1}                 /* rows without a bar: label may run full width */
+.yb-catbar.wide .ct{width:auto}
+
+	/* ---- tabs (frontpage) as segmented control ---- */
+	.nav-tabs{border-bottom:0; display:inline-flex; background:var(--surface-2); border:1px solid var(--border); border-radius:11px; padding:4px; gap:2px; margin-bottom:16px}
+	.nav-tabs .nav-item{margin:0}
+	.nav-tabs .nav-link{border:0!important; border-radius:8px; color:var(--muted); font-weight:600; padding:7px 15px}
+	.nav-tabs .nav-link:hover{color:var(--ink)}
+	.nav-tabs .nav-link.active{background:var(--surface); color:var(--brand-ink); box-shadow:var(--shadow)}
+
+	/* ---- torrent list ---- */
+	.yb-listcard{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
+	.yb-listcard .table{margin:0; color:var(--ink)}
+	.yb-listcard .table th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700; border:0; border-bottom:1px solid var(--border); background:var(--surface-2); padding:12px 14px; vertical-align:middle}
+	.yb-listcard .table th a{color:var(--muted)}
+	.yb-listcard .table td{border:0; border-bottom:1px solid var(--border); padding:11px 14px; vertical-align:middle; background:transparent}
+	.yb-listcard .table tbody tr:last-child td{border-bottom:0}
+	.yb-listcard .table tbody tr:hover td{background:var(--surface-2)}
+	.yb-cat{width:34px; height:34px; border-radius:9px; display:inline-grid; place-items:center; color:#fff; font-size:15px; flex:none}
+	.yb-tname{font-weight:600; color:var(--ink)}
+	.yb-tname:hover{color:var(--brand-ink); text-decoration:none}
+	.yb-pill{font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; display:inline-flex; align-items:center; gap:4px}
+	.yb-pill.v{background:rgba(18,146,90,.13); color:var(--seed)}
+	.yb-pill.rg{background:var(--surface-2); border:1px solid var(--border); color:var(--muted); text-decoration:none}
+	.yb-pill.rg:hover{border-color:var(--brand); color:var(--brand-ink); text-decoration:none}
+	/* uploader link in the list-row meta line - sits in the same muted text as "in <category>" */
+	.yb-upl{color:var(--muted); font-weight:600; text-decoration:none}
+	.yb-upl:hover{color:var(--brand-ink); text-decoration:underline}
+	.sd{color:var(--seed)!important; font-weight:700; font-variant-numeric:tabular-nums}
+	.pr{color:var(--peer)!important; font-weight:700; font-variant-numeric:tabular-nums}
+	.yb-health{display:inline-flex; gap:2px}
+	.yb-health i{width:5px; height:14px; border-radius:2px; background:var(--border-strong); display:inline-block}
+	.yb-health i.on{background:var(--seed)}
+
+	/* ---- torrent detail hero ---- */
+	.yb-hero{display:grid; grid-template-columns:220px 1fr; gap:24px; padding:22px}
+	.yb-cover picture,.yb-cover img{width:100%; border-radius:12px; box-shadow:var(--shadow-lg); display:block}
+	.yb-cover .ph{aspect-ratio:2/3; border-radius:12px; background:linear-gradient(135deg,#2a2f3a,#4a5160); display:grid; place-items:center; color:#98a0ad; font-size:13px}
+	.yb-hero h1{font-size:24px; font-weight:800; letter-spacing:-.02em; margin:0 0 4px}
+	.yb-hero .orig{color:var(--muted); margin-bottom:14px}
+	/* TMDb backdrop behind the whole hero card (yb_bots/backdrops.php, test 09-2026): the image sits
+	   under poster, title, stat boxes and detail grid, veiled with the card colour so text stays
+	   readable. Since 09-27 (Rex) the veil never turns solid: it stays translucent down to the download
+	   buttons at the bottom of the card, which now sit in the card instead of a separate bar (.yb-dl).
+	   The stat boxes / grid cells carry their own surface backgrounds, so they read fine on top.
+	   Browsers without color-mix() keep the plain card. */
+	/* 09-28 (Rex): hero starts 50px lower; that top strip shows the backdrop almost unveiled (8%), then the veil ramps to the old 62% by 130px */
+	.yb-bdcard{padding-top:50px; background-image:linear-gradient(180deg, color-mix(in srgb, var(--surface) 8%, transparent) 0, color-mix(in srgb, var(--surface) 12%, transparent) 50px, color-mix(in srgb, var(--surface) 62%, transparent) 130px, color-mix(in srgb, var(--surface) 84%, transparent) 42%, color-mix(in srgb, var(--surface) 90%, transparent) 100%), var(--bd); background-size:cover; background-position:center 20%; background-repeat:no-repeat}
+	/* blurred-cover backdrop (games / software / adult without a real one): the cover, heavily blurred, in a
+	   ::before under the content; the same surface veil as .yb-bdcard sits on top in ::after */
+	.yb-bdblur{--bd:none; position:relative; overflow:hidden; isolation:isolate; background-image:none}
+	.yb-bdblur::before{content:""; position:absolute; inset:-60px; z-index:-2; background:var(--bdb) center 30%/cover no-repeat; filter:blur(40px) saturate(1.5); opacity:.9}
+	.yb-bdblur::after{content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(180deg, color-mix(in srgb, var(--surface) 20%, transparent) 0, color-mix(in srgb, var(--surface) 55%, transparent) 130px, color-mix(in srgb, var(--surface) 80%, transparent) 42%, color-mix(in srgb, var(--surface) 90%, transparent) 100%)}
+	.yb-bdcard .yb-hero h1{text-shadow:0 1px 0 var(--surface), 0 0 14px var(--surface)}
+	.yb-bdcard .yb-hero .orig,.yb-bdcard .yb-stat .k{text-shadow:0 0 10px var(--surface)}
+	/* trailer box: YouTube thumbnail + play button, swapped for the iframe on click (torrent.tpl) */
+	.yb-trailer{position:relative; aspect-ratio:16/9; max-width:880px; margin:0 auto; border-radius:var(--radius); overflow:hidden; background:#000 center/cover no-repeat; cursor:pointer}
+	.yb-trailer iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
+	.yb-play{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:76px; height:76px; border-radius:50%; border:0; background:rgba(228,35,19,.92); color:#fff; font-size:28px; padding-left:5px; display:grid; place-items:center; box-shadow:0 8px 28px rgba(0,0,0,.45); cursor:pointer; transition:transform .12s, background .12s}
+	.yb-trailer:hover .yb-play{background:var(--brand); transform:translate(-50%,-50%) scale(1.06)}
+	.yb-lead{font-style:italic; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--brand); border-radius:8px; padding:10px 14px; margin:0 0 16px}
+	.yb-stats{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px}
+	.yb-stat{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:88px}
+	.yb-stat .k{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700}
+	.yb-stat .v{font-size:16px; font-weight:800; margin-top:2px}
+	/* wrapping flex, not grid: boxes in a part-filled row grow to fill it (a grid left empty border-coloured cells);
+	   the full-width rows carry an inline grid-column:1/-1, matched here as a 100% basis */
+	.yb-detailgrid{display:flex; flex-wrap:wrap; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-top:6px}
+	.yb-detailgrid > div{flex:1 1 180px; min-width:0; background:var(--surface); padding:11px 14px}
+	.yb-detailgrid > div[style*="grid-column"]{flex-basis:100%}
+	.yb-detailgrid .k{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700}
+	.yb-detailgrid .v{font-weight:600; margin-top:3px; word-break:break-word}
+	.yb-mpaa{margin-top:12px; font-size:13px; color:var(--muted); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px 14px}
+	.yb-mpaa b.lvl{display:inline-block; font-weight:800; margin-bottom:3px}
+	.yb-dl{padding:16px 22px}	/* part of the card, no bar (was border-top + surface-2 background until 09-27) */
+	/* download buttons (torrent.tpl, 09-27): replaced the old dlbutton PNGs. a = neutral, b = brand (the
+	   real download page), c = inverted ink, so it flips with light/dark like the rest of the theme */
+	.yb-gets{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+	.yb-gets.one{grid-template-columns:minmax(0,360px); justify-content:center}
+	.yb-get{display:flex; align-items:center; justify-content:center; gap:10px; min-height:54px; padding:10px 16px; border-radius:var(--radius); font-size:16px; font-weight:800; letter-spacing:.01em; text-decoration:none!important; border:1px solid transparent; transition:transform .12s, box-shadow .12s, background .12s}
+	.yb-get i{font-size:18px}
+	.yb-get:hover{transform:translateY(-1px)}
+	.yb-get.a{background:var(--surface-2); border-color:var(--border); color:var(--ink)}
+	.yb-get.a:hover{border-color:var(--brand); color:var(--brand)}
+	.yb-get.b{background:var(--brand); color:#fff; box-shadow:0 6px 18px color-mix(in srgb, var(--brand) 35%, transparent)}
+	.yb-get.b:hover{background:var(--brand-ink); color:#fff}
+	.yb-get.c{background:var(--ink); color:var(--surface)}
+	.yb-get.c:hover{color:var(--surface); box-shadow:0 6px 18px rgba(0,0,0,.25)}
+	@media(max-width:640px){ .yb-gets{grid-template-columns:1fr} }
+	.yb-sechead{font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 12px}
+	/* category hub (browse.tpl, 09-29): stats + sparkline, quick views, smart subcategory tiles with fanned cover art.
+	   Tile tints are color-mix()ed from a per-tile hue (--h) with the theme tokens, so light and dark need no overrides. */
+	.yb-hub{margin:0 0 16px; padding:20px 20px 22px; border:1px solid var(--border); border-radius:16px; background:var(--surface); box-shadow:var(--shadow)}
+	.yb-hub-top{display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap}
+	.yb-hub-name{font-size:30px; font-weight:900; letter-spacing:-.02em; line-height:1.1; color:var(--ink)}
+	.yb-hub-name a{color:var(--muted); text-decoration:none}
+	.yb-hub-name a:hover{color:var(--brand)}
+	.yb-hub-name span{margin:0 10px; color:var(--border-strong); font-weight:400}
+	.yb-hub-stats{display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:8px; font-size:14px; color:var(--muted)}
+	.yb-hub-stats b{color:var(--ink); font-weight:800}
+	.yb-hub-stats .live i{display:inline-block; width:8px; height:8px; margin-right:6px; border-radius:50%; background:var(--seed); vertical-align:1px; box-shadow:0 0 0 0 color-mix(in srgb,var(--seed) 55%,transparent); animation:ybpulse 1.8s infinite}
+	@keyframes ybpulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+	.yb-hub-spark{text-align:right}
+	.yb-hub-spark .bars{display:flex; align-items:flex-end; gap:3px; width:210px; height:46px}
+	.yb-hub-spark .bars i{flex:1; min-height:2px; border-radius:3px 3px 1px 1px; background:linear-gradient(to top,var(--brand),color-mix(in srgb,var(--brand) 45%,var(--surface))); transition:filter .15s}
+	.yb-hub-spark .bars i:last-child{opacity:.45}	/* today, still filling up */
+	.yb-hub-spark .bars i:hover{filter:brightness(1.2)}
+	.yb-hub-spark small{display:block; margin-top:5px; font-size:11.5px; color:var(--muted)}
+	.yb-hub-quick{display:flex; flex-wrap:wrap; gap:6px; margin-top:16px}
+	.yb-hub-quick a{padding:7px 15px; border:1px solid var(--border); border-radius:999px; font-size:13px; font-weight:700; color:var(--ink); text-decoration:none; transition:border-color .15s,background .15s}
+	.yb-hub-quick a:hover{border-color:var(--brand); color:var(--brand)}
+	.yb-hub-quick a.on{background:var(--ink); border-color:var(--ink); color:var(--surface)}
+	.yb-hub-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; margin-top:16px}
+	.yb-sub{position:relative; display:flex; flex-direction:column; justify-content:space-between; gap:10px; min-height:128px; padding:14px 16px; border:1px solid color-mix(in srgb,hsl(var(--h) 70% 55%) 30%,var(--border)); border-radius:14px; overflow:hidden; color:var(--ink)!important; text-decoration:none!important; background:linear-gradient(135deg,color-mix(in srgb,hsl(var(--h) 80% 55%) 15%,var(--surface)),var(--surface) 75%); transition:transform .2s,box-shadow .2s,border-color .2s}
+	.yb-sub:hover{transform:translateY(-3px); box-shadow:var(--shadow-lg); border-color:color-mix(in srgb,hsl(var(--h) 75% 55%) 70%,var(--border))}
+	.yb-sub.on{box-shadow:0 0 0 2px var(--brand); border-color:var(--brand)}
+	.yb-sub .art{position:absolute; top:0; right:0; bottom:0; width:128px; pointer-events:none}
+	.yb-sub .art img{position:absolute; top:50%; width:58px; height:86px; object-fit:cover; border:2px solid var(--surface); border-radius:7px; box-shadow:0 6px 16px rgba(0,0,0,.28); transition:transform .4s cubic-bezier(.3,1.4,.5,1)}
+	.yb-sub .art img:nth-child(1){right:58px; transform:translateY(-50%) rotate(-11deg)}
+	.yb-sub .art img:nth-child(2){right:30px; z-index:2; transform:translateY(-52%)}
+	.yb-sub .art img:nth-child(3){right:4px; z-index:1; transform:translateY(-50%) rotate(11deg)}
+	.yb-sub:hover .art img:nth-child(1){transform:translate(-10px,-50%) rotate(-17deg)}
+	.yb-sub:hover .art img:nth-child(2){transform:translateY(-58%) scale(1.07)}
+	.yb-sub:hover .art img:nth-child(3){transform:translate(8px,-50%) rotate(17deg)}
+	.yb-sub .txt,.yb-sub .num{position:relative; z-index:3; max-width:calc(100% - 118px)}
+	.yb-sub .txt b{display:block; font-size:15.5px; font-weight:800; line-height:1.2}
+	.yb-sub .txt small{display:block; margin-top:3px; font-size:12px; line-height:1.3; color:var(--muted)}
+	.yb-sub .num{font-size:14px; font-weight:800; line-height:1.2; color:color-mix(in srgb,hsl(var(--h) 75% 45%) 72%,var(--ink))}
+	.yb-sub .num em{display:block; margin-top:2px; color:var(--seed); font-size:11.5px; font-style:normal; font-weight:700}
+	/* details page: genre pills + "Also in" tags link to the category hub (09-29); hue per genre, tokens for the rest */
+	.yb-gpill{display:inline-block; margin:2px 6px 2px 0; padding:3px 11px; border:1px solid color-mix(in srgb,hsl(var(--h,220) 70% 50%) 35%,var(--border)); border-radius:999px; background:color-mix(in srgb,hsl(var(--h,220) 80% 55%) 13%,var(--surface)); color:color-mix(in srgb,hsl(var(--h,220) 75% 40%) 70%,var(--ink))!important; font-size:12.5px; font-weight:700; text-decoration:none!important; transition:transform .15s,border-color .15s}
+	a.yb-gpill:hover{transform:translateY(-1px); border-color:var(--brand)}
+	.yb-gpill.tag{border-color:var(--border); background:var(--surface-2); color:var(--ink)!important}
+	.yb-gpill.tag:hover{color:var(--brand)!important}
+	/* genre tiles: a second, more compact grid */
+	.yb-hub-label{margin:20px 0 -4px; font-size:12px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
+	.yb-hub-label small{margin-left:8px; font-size:11.5px; font-weight:600; letter-spacing:0; text-transform:none}
+	.yb-hub-grid.genres{grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px}
+	.yb-hub-grid.genres .yb-sub{min-height:100px; padding:12px 14px}
+	.yb-hub-grid.genres .yb-sub .art{width:104px}
+	.yb-hub-grid.genres .yb-sub .art img{width:46px; height:68px}
+	.yb-hub-grid.genres .yb-sub .art img:nth-child(1){right:48px}
+	.yb-hub-grid.genres .yb-sub .art img:nth-child(2){right:26px}
+	.yb-hub-grid.genres .yb-sub .txt,.yb-hub-grid.genres .yb-sub .num{max-width:calc(100% - 96px)}
+	.yb-hub-grid.genres .yb-sub .num{max-width:none}
+	.yb-hub-grid .yb-sub.x{display:none}	/* past the first two rows until "More subcategories" / "More genres" */
+	.yb-hub-more{display:block; margin:12px auto 0; padding:8px 20px; border:1px solid var(--border); border-radius:999px; background:var(--surface-2); color:var(--ink); font-size:13px; font-weight:800; cursor:pointer; transition:border-color .15s,color .15s}
+	.yb-hub-more:hover{border-color:var(--brand); color:var(--brand)}
+	.yb-hub-more[hidden]{display:none}
+	/* on a subcategory page the tiles become one scrollable row, so the results stay above the fold */
+	.yb-hub.is-sub .yb-hub-grid{grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:280px; overflow-x:auto; padding:2px 2px 8px; scroll-snap-type:x proximity}
+	.yb-hub.is-sub .yb-sub{scroll-snap-align:start}
+	@media(max-width:640px){
+		.yb-hub{padding:14px}
+		.yb-hub-name{font-size:24px}
+		.yb-hub-spark{width:100%; text-align:left}
+		.yb-hub-spark .bars{width:100%; height:36px}
+		.yb-hub-quick{flex-wrap:nowrap; overflow-x:auto; margin-right:-14px; padding-right:14px}
+		.yb-hub-quick a{flex:none}
+		.yb-hub-grid,.yb-hub.is-sub .yb-hub-grid{grid-template-columns:none; grid-template-rows:repeat(2,auto); grid-auto-flow:column; grid-auto-columns:82%; overflow-x:auto; margin-right:-14px; padding-right:14px; scroll-snap-type:x proximity}
+		.yb-hub.is-sub .yb-hub-grid{grid-template-rows:none}
+		.yb-sub{scroll-snap-align:start}
+	}
+	.yb-filelist{list-style:none; margin:0; padding:0}
+	.yb-filelist li{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border)}
+	.yb-filelist li:last-child{border-bottom:0}
+	.yb-filelist .sz{margin-left:auto; font-size:11px; font-weight:700; color:var(--muted); background:var(--surface-2); border:1px solid var(--border); padding:2px 9px; border-radius:999px; white-space:nowrap}
+	@media(max-width:640px){ .yb-hero{grid-template-columns:1fr} .yb-cover{max-width:200px; margin:0 auto} }
+
+	/* ---- pagination ---- */
+	.pagination{gap:4px; flex-wrap:wrap}
+	.page-link{border:1px solid var(--border); color:var(--ink); border-radius:8px!important; background:var(--surface)}
+	.page-link:hover{background:var(--surface-2); color:var(--brand-ink); border-color:var(--border-strong)}
+	.page-item.active .page-link{background:var(--brand); border-color:var(--brand); color:#fff}
+
+	/* ---- footer ---- */
+	footer{margin-top:40px; padding:24px 0; color:var(--muted); border-top:1px solid var(--border); font-size:13px}
+	footer a{color:var(--muted)}
+
+	/* ---- collapsed nav (tablet + small laptop) ----
+	   The nav bar is navbar-expand-xl, not -md: the six nav links plus the brand and the user menu
+	   need ~890px on their own, so under 1200px there was no room left for a search bar and it
+	   pushed itself (and the user menu behind it) off the right edge. Below 1200 the links move
+	   into the hamburger; the search bar and the user menu stay in the row. */
+	@media(max-width:1199.98px){
+		/* flex-basis 0, not 560px: in a wrapping flex row the basis decides line breaks BEFORE shrinking,
+		   so a 560px basis bumped the pill onto its own row at ~820px instead of just getting narrower */
+		.yb-search{order:2; flex:1 1 0; max-width:560px; margin:0}
+		.yb-navright{order:3}
+		.yb-nav .navbar-toggler{order:4}
+		.yb-nav .navbar-collapse{order:5; max-height:calc(100vh - 66px); overflow-y:auto; background:var(--surface); margin-top:6px; padding:6px 0 12px; border-top:1px solid var(--border)}
+		.yb-nav .navbar-nav{margin-bottom:4px}
+		.yb-navright{margin-bottom:0}
+		/* thumb-sized target, 16px input (anything smaller zooms iOS Safari on focus) */
+		.yb-search-pill{height:44px; padding:0 5px 0 6px}
+		.yb-search-q{height:38px; font-size:16px}
+		.yb-search-x{flex-basis:30px; width:30px; height:30px}
+		.yb-search-go{height:36px; min-width:36px}
+		.yb-search-ri{padding:11px 9px; font-size:14px}
+	}
+
+	/* ---- mobile / responsive ---- */
+	@media(max-width:767px){
+		/* phone: brand + user menu + burger on row 1, the search pill full width on row 2, so the
+		   fixed header is two rows tall */
+		body{padding-top:108px}
+		.container{padding-left:12px; padding-right:12px}
+		/* the navbar's own .container is zeroed by Bootstrap, which left the pill full-bleed while the
+		   chip strip below it sat 12px in — match them */
+		.yb-nav > .container{padding-left:12px; padding-right:12px}
+		.yb-nav .navbar-brand{font-size:16px; margin-right:6px}
+		.yb-nav .navbar-toggler{order:3; padding:.25rem .55rem}
+		.yb-navright{order:2}
+		.yb-search{order:4; flex:0 0 100%; width:100%; margin:7px 0 0}
+		.yb-nav .navbar-collapse{max-height:calc(100vh - 108px); margin:6px -12px 0; padding:6px 14px 14px}
+		.yb-search-go span{display:none}
+		/* a long username must not shove the burger off the row */
+		.yb-uname{display:inline-block; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+		/* other list tables (search sponsored): tighter cells, swipe if needed */
+		.yb-listcard{overflow-x:auto; -webkit-overflow-scrolling:touch}
+		.yb-listcard .table th, .yb-listcard .table td{padding:9px 8px; font-size:12.5px}
+		.yb-cat{width:30px; height:30px; font-size:13px}
+		/* torrent list → one stacked card per row, NO horizontal scroll */
+		.yb-rowswrap{overflow:visible; border:0; box-shadow:none; background:transparent; border-radius:0}
+		.yb-rows{background:transparent}
+		.yb-rows thead{display:none}
+		.yb-rows tbody tr{display:block; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:var(--shadow); padding:11px 13px; margin-bottom:10px}
+		.yb-rows tbody tr:hover td{background:transparent}
+		.yb-rows tbody td{display:inline-block; border:0!important; padding:0; text-align:left!important; font-size:12px; color:var(--muted); margin:0 15px 0 0; vertical-align:middle}
+		.yb-rows tbody td.yb-cell-name{display:block; margin:0 0 8px; font-size:14px; color:var(--ink)}
+		.yb-rows tbody td[data-label]::before{content:attr(data-label) " "; font-weight:700; text-transform:uppercase; letter-spacing:.03em; font-size:9.5px; color:var(--muted); opacity:.7; margin-right:3px}
+		.container h1{font-size:22px}
+		.yb-hero{padding:16px}
+		.yb-bigstat .n{font-size:24px}
+		/* .yb-cloud responsive rules live in templates/static/cloud.tpl — that
+		   style block renders later in the body, so anything declared here is
+		   overridden by its unconditional base rules. */
+	}
+	@media(max-width:400px){
+		.yb-listcard .table th, .yb-listcard .table td{padding:8px 6px; font-size:12px}
+		.yb-stat{min-width:calc(50% - 4px)}
+	}
+	/* ===== list/grid view toggle + poster grid ===== */
+	.yb-toggle{display:flex; gap:6px; justify-content:flex-end; margin:0 0 10px}
+	.yb-toggle button{font-size:12px; font-weight:700; border:1px solid var(--border); background:var(--surface); color:var(--muted); padding:6px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; line-height:1}
+	.yb-toggle button:hover{border-color:var(--brand); color:var(--ink)}
+	.yb-toggle button.on{background:var(--brand); border-color:var(--brand); color:#fff}
+	.yb-view-grid{display:none}
+	body.yb-gridview .yb-view-list{display:none}
+	body.yb-gridview .yb-view-grid{display:block}
+	div.yb-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:2px 0 14px}
+	.yb-gcard{position:relative; display:flex; flex-direction:column; text-decoration:none; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; box-shadow:var(--shadow); transition:transform .14s, border-color .14s}
+	.yb-gcard:hover{transform:translateY(-3px); border-color:var(--brand); text-decoration:none}
+	.yb-gcard-ico{position:relative; aspect-ratio:2/3; display:flex; align-items:center; justify-content:center; background:var(--surface-2)}
+	.yb-gcard-ico>i{font-size:44px; opacity:.85}
+	.yb-gcard-cov{position:absolute; top:0; left:0; width:100%; height:100%}
+	.yb-gcard-cov img{width:100%; height:100%; object-fit:cover; display:block}
+	.yb-gcard-v{position:absolute; top:7px; right:7px; background:var(--brand); color:#fff; font-size:10px; width:19px; height:19px; border-radius:50%; display:flex; align-items:center; justify-content:center}
+	.yb-gcard-name{font-size:12.5px; font-weight:600; color:var(--ink); line-height:1.35; padding:9px 10px 5px; flex:1; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word}
+	/* stretched link: the card is a div, this <a> covers it so the whole card stays clickable while
+	   the RG pill below can be its own link (see torrentgrid.tpl) */
+	.yb-gcard-link{position:absolute; inset:0; z-index:1}
+	.yb-gcard-rg{padding:0 10px 7px; position:relative; z-index:2}
+	.yb-gcard-rg .yb-pill{font-size:10px; padding:1px 7px; max-width:100%}
+	/* uploader line on a grid card - z-index like the RG row above, so its link beats the stretched
+	   card link; cards are only 150px wide (124 on mobile), so a long username has to ellipsis */
+	.yb-gcard-by{padding:0 10px 7px; position:relative; z-index:2; font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+	.yb-rg-av{border-radius:50%; object-fit:cover; display:block}
+	/* the release group's standing note under a torrent's own description */
+	.yb-rgnote{font-size:13px; color:var(--ink)}
+	.yb-rgnote.sep{margin-top:16px; padding-top:14px; border-top:1px dashed var(--border-strong)}
+	.yb-rgnote-h{display:flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:8px}
+	.yb-rgnote-h a{color:var(--brand-ink)}
+	.yb-gcard-meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:11px; padding:0 10px 9px; color:var(--muted)}
+	.yb-gcard-meta .s{color:var(--seed); font-weight:700}
+	.yb-gcard-meta .p{color:var(--peer); font-weight:700}
+	.yb-gcard-meta .z{margin-left:auto}
+	@media(max-width:760px){div.yb-grid{grid-template-columns:repeat(auto-fill,minmax(124px,1fr)); gap:9px}}
+	/* torrent page "Other versions" (torrent.tpl, sep 2026): quality filter tabs + rows with a quality badge */
+	.yb-ov-h{display:flex; align-items:baseline; gap:12px; margin:0 0 12px}
+	.yb-ov-h .yb-sechead{margin:0}
+	.yb-ov-n{margin-left:auto; white-space:nowrap; font-size:12px; font-weight:700; color:var(--muted)}
+	.yb-ov-tabs{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px}
+	.yb-ov-tab{display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:1px solid var(--border); border-radius:999px; background:var(--surface-2); color:var(--ink); font-size:13px; font-weight:700; cursor:pointer}
+	.yb-ov-tab b{font-size:11px; font-weight:800; color:var(--muted)}
+	.yb-ov-tab:hover{border-color:var(--border-strong)}
+	.yb-ov-tab.on{background:var(--brand); border-color:var(--brand); color:#fff}
+	.yb-ov-tab.on b{color:rgba(255,255,255,.8)}
+	.yb-ov-list{border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden}
+	a.yb-ov-r{display:grid; grid-template-columns:52px minmax(0,1fr) 84px 76px; align-items:center; gap:12px; padding:9px 14px; color:var(--ink) !important; text-decoration:none !important; border-top:1px solid var(--border)}
+	a.yb-ov-r:first-child{border-top:0}
+	a.yb-ov-r[hidden]{display:none}
+	a.yb-ov-r:hover{background:var(--surface-2)}
+	.yb-ov-q{display:flex; align-items:center; justify-content:center; height:26px; border-radius:7px; font-size:11.5px; font-weight:800; background:var(--surface-2); color:var(--muted); border:1px solid var(--border)}
+	.yb-ov-q.q0{background:var(--brand); border-color:var(--brand); color:#fff}
+	.yb-ov-q.q1{background:#2563eb; border-color:#2563eb; color:#fff}
+	.yb-ov-q.q2{background:#0d9488; border-color:#0d9488; color:#fff}
+	.yb-ov-q.q3{background:var(--gold); border-color:var(--gold); color:#fff}
+	.yb-ov-m{min-width:0; display:flex; flex-direction:column; gap:4px}
+	.yb-ov-name{font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+	.yb-ov-tags{display:flex; flex-wrap:wrap; gap:5px; align-items:center}
+	.yb-fmt{font-size:10.5px; font-weight:700; line-height:1; padding:3px 6px; border-radius:5px; background:var(--surface-2); border:1px solid var(--border); color:var(--ink)}
+	.yb-fmt.hdr{border-color:#8b5cf6; color:#7c3aed}
+	.yb-fmt.bad{border-color:var(--brand); color:var(--brand-ink)}
+	.yb-fmt.lang{border-color:var(--gold); color:var(--gold)}
+	.yb-ov-grp{font-size:11.5px; color:var(--muted)}
+	.yb-ov-size{font-size:13px; text-align:right; white-space:nowrap}
+	.yb-ov-sp{display:flex; flex-direction:column; align-items:flex-end; line-height:1.15}
+	.yb-ov-sp b{font-size:14.5px; color:var(--seed)}
+	.yb-ov-sp b.h1,.yb-ov-sp b.h2{color:var(--brand)}
+	.yb-ov-sp b.h3,.yb-ov-sp b.h4{color:var(--gold)}
+	.yb-ov-sp i{font-style:normal; font-size:11px; color:var(--muted)}
+	@media(max-width:640px){
+		a.yb-ov-r{grid-template-columns:44px minmax(0,1fr) auto; gap:6px 10px; padding:10px 11px}
+		.yb-ov-m{grid-column:2/-1}
+		.yb-ov-q{grid-row:1/3; align-self:start}
+		.yb-ov-name{white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
+		.yb-ov-size{grid-column:2; text-align:left}
+		.yb-ov-sp{flex-direction:row; gap:6px; align-items:baseline}
+	}
+	</style><script data-cfasync='false' src='//tuckerclassesjackal.com/11/7e/e9/117ee989d839244c0f878259c0affb1f.js'></script><script src="/glx/l.js?v=c40bfd7840" type="78d854b49674f403ef06429e-text/javascript"></script><script type="78d854b49674f403ef06429e-text/javascript">
+		aclib.runPop({
+			zoneId: '2608255',
+		});
+	</script><script src="https://y.t0r.store/static/js.js" type="78d854b49674f403ef06429e-text/javascript"></script><link rel="canonical" href="https://yourbittorrent.com/?q=anthony-hamilton-soulife">
+</head><body><nav class="navbar navbar-expand-xl navbar-light fixed-top yb-nav"><div class="container"><a class="navbar-brand" href="/"><svg class="yb-logo" viewBox="0 0 144 144" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="sdclipl"><rect width="144" height="144" rx="34"/></clipPath></defs><rect width="144" height="144" rx="34" fill="#1b2230"/><g clip-path="url(#sdclipl)"><svg x="0" y="4" width="144" height="144" viewBox="28 12 144 144"><defs><filter id="sddutyfg" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation=".7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M58 80 L46 16 L58 30 L64 28 L90 58Z" fill="#b8793f" stroke="#0e1117" stroke-width="4" stroke-linejoin="round"/><path d="M60 70 L52 30 L82 58Z" fill="#7a4a2a"/><path d="M142 80 L154 16 L110 58Z" fill="#3a4556" stroke="#0e1117" stroke-width="4" stroke-linejoin="round"/><path d="M140 70 L148 30 L118 58Z" fill="#262d3a"/><path d="M60 72 C70 56 86 50 100 50 C114 50 130 56 140 72 C150 86 154 102 150 116 C146 130 132 142 122 150 C114 158 106 164 100 164 C94 164 86 158 78 150 C68 142 54 130 50 116 C46 102 50 86 60 72Z" fill="#c98a4b" stroke="#0e1117" stroke-width="4" stroke-linejoin="round"/><ellipse cx="68" cy="122" rx="15" ry="11" fill="#e3b27a" opacity=".8"/><path d="M82 56 L86 40 L91 52 L96 33 L100 49 L104 33 L109 52 L114 40 L118 56Z" fill="#1c1a1f" stroke="#0e1117" stroke-width="4" stroke-linejoin="round"/><path d="M62 74 C72 58 86 52 100 52 C114 52 128 58 138 74 C128 80 116 84 100 84 C84 84 72 80 62 74Z" fill="#1c1a1f"/><path d="M100 60 C107 70 112 84 113 99 L87 99 C88 84 93 70 100 60Z" fill="#1c1a1f"/><path d="M120 116 L148 110 L141 136 L119 145Z" fill="#3a4556" stroke="#6b7a90" stroke-width="1"/><path d="M52 86 L100 99 L148 86 L146 110 Q100 106 54 110Z" fill="#10141c" stroke="#56647a" stroke-width="1.4"/><path d="M68 98 L88 103 M112 103 L132 98" stroke="#ff4a3d" stroke-width="6" stroke-linecap="round" filter="url(#sddutyfg)"/><circle class="sd-scan" cx="64" cy="104" r="2.6" fill="#c9d3df"/><path d="M84 118 C84 110 92 106 100 106 C108 106 116 110 116 118 L118 140 C114 150 106 154 100 154 C94 154 86 150 82 140Z" fill="#3a3236"/><path d="M100 132 V139 M100 139 Q93 145 87 142 M100 139 Q108 142 115 136" fill="none" stroke="#0d0c0f" stroke-width="2.2" stroke-linecap="round"/><path d="M107 140 L109.5 148 L112 139Z" fill="#f4f1ea" stroke="#0d0c0f" stroke-width=".6"/><path d="M91 122 C91 116 109 116 109 122 C109 128 103 131 100 132 C97 131 91 128 91 122Z" fill="#0d0c0f"/><ellipse cx="96" cy="120" rx="3" ry="1.5" fill="#fff" opacity=".45"/></svg></g></svg><span class="yb-wm"><i>Your</i>Bittorrent</span></a><form class="yb-search" action="/" method="get" role="search"><div class="yb-search-pill has"><input type="search" class="yb-search-q" name="q" value="anthony hamilton soulife" placeholder="Search torrents&hellip;" aria-label="Search torrents" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"><button type="button" class="yb-search-x" title="Clear" aria-label="Clear search"><i class="fa fa-times"></i></button><button type="submit" class="yb-search-go" aria-label="Search"><i class="fa fa-search"></i><span>Search</span></button></div></form><ul class="navbar-nav yb-navright"><li class="nav-item"><a href="#" class="nav-link" role="button" title="Toggle light / dark" onclick="if (!window.__cfRLUnblockHandlers) return false; ybToggleTheme();return false" data-cf-modified-78d854b49674f403ef06429e-=""><i id="yb-theme-icon" class="fa fa-adjust"></i></a></li><li class="nav-item dropdown"><a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fas fa-user" style="color:#DAA520"></i>&nbsp;<span class="yb-uname">Guest</span></a><ul class="nav-item dropdown-menu dropdown-menu-right"><a class="dropdown-item" href="/login.html"><i class="fa fa-sign-in fa-fw"></i>&nbsp; Login</a><a class="dropdown-item" href="/signup.html"><i class="fa fa-pencil fa-fw"></i>&nbsp; Sign up</a></ul></li></ul><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button><div id="navbar" class="navbar-collapse collapse"><ul class="navbar-nav mr-auto"><li class="nav-item dropdown"><a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Categories</a><div class="dropdown-menu" class="dropdown-menu"><a class="dropdown-item" href="/movies.html"><i class="fal fa-video fa-fw" style="color:#ec2319"></i>&nbsp; Movies</a><a class="dropdown-item" href="/music.html"><i class="fal fa-music fa-fw" style="color:#ec2319"></i>&nbsp; Music</a><a class="dropdown-item" href="/television.html"><i class="fal fa-tv fa-fw" style="color:#ec2319"></i>&nbsp; Television</a><a class="dropdown-item" href="/games.html"><i class="fal fa-gamepad fa-fw" style="color:#ec2319"></i>&nbsp; Games</a><a class="dropdown-item" href="/software.html"><i class="fal fa-file fa-fw" style="color:#ec2319"></i>&nbsp; Software</a><a class="dropdown-item" href="/anime.html"><i class="fal fa-d-and-d fa-fw" style="color:#ec2319"></i>&nbsp; Anime</a><a class="dropdown-item" href="/adult.html"><i class="fal fa-heart fa-fw" style="color:#ec2319"></i>&nbsp; XXX</a><a class="dropdown-item" href="/ebooks.html"><i class="fal fa-book fa-fw" style="color:#ec2319"></i>&nbsp; eBooks</a><a class="dropdown-item" href="/pictures.html"><i class="fal fa-images fa-fw" style="color:#ec2319"></i>&nbsp; Photos</a><a class="dropdown-item" href="/other.html"><i class="fal fa-ellipsis-h fa-fw" style="color:#ec2319"></i>&nbsp; Other</a></div></li><li class="nav-item"><a class="nav-link" href="/?section=hot"><i class="fal fa-fire fa-fw" style="color:#ec2319"></i> Hot</a></li><li class="nav-item"><a class="nav-link" href="/upload.html">Upload</a></li><li class="nav-item"><a class="nav-link" href="/?section=rg">Release Groups</a></li><li class="nav-item"><a class="nav-link" href="/?section=forum">Forum</a></li><li class="nav-item dropdown"><a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">More</a><div class="dropdown-menu" class="dropdown-menu"><a class="dropdown-item" href="/news.html"><i class="fal fa-newspaper fa-fw" style="color:#DAA520"></i>&nbsp; News</a><a class="dropdown-item" href="/cloud.html"><i class="fal fa-cloud fa-fw" style="color:#DAA520"></i>&nbsp; Trending Searches</a><a class="dropdown-item" href="/legal.html"><i class="fal fa-gavel fa-fw" style="color:#DAA520"></i>&nbsp; Legal</a><a class="dropdown-item" href="/advertising.html"><i class="fab fa-adversal fa-fw" style="color:#DAA520"></i>&nbsp; Advertising</a><a class="dropdown-item" href="/privacy.html"><i class="fal fa-user-secret fa-fw" style="color:#DAA520"></i>&nbsp; Privacy</a><a class="dropdown-item" href="/clients.html"><i class="fal fa-desktop fa-fw" style="color:#DAA520"></i>&nbsp; Bittorrent Clients</a><a class="dropdown-item" href="/faq.html"><i class="fal fa-question-circle fa-fw" style="color:#DAA520"></i>&nbsp; FAQ</a><a class="dropdown-item" href="/stats.html"><i class="fal fa-chart-bar fa-fw" style="color:#DAA520"></i>&nbsp; Site Stats</a><a class="dropdown-item" href="/api.html"><i class="fal fa-code fa-fw" style="color:#DAA520"></i>&nbsp; JSON API</a><a class="dropdown-item" href="/settings.html"><i class="fal fa-cog fa-fw" style="color:#DAA520"></i>&nbsp; Settings</a><a class="dropdown-item" href="/about.html"><i class="fal fa-info-circle fa-fw" style="color:#DAA520"></i>&nbsp; About</a><a class="dropdown-item" href="/contact.html"><i class="fal fa-envelope fa-fw" style="color:#DAA520"></i>&nbsp; Contact</a></div></li></ul></div><!--/.nav-collapse --></div><!--/.container --></nav><div class="container"><nav class="yb-cats"><a class="yb-chip" href="/"><i class="fal fa-fire fa-fw"></i> Popular</a><a class="yb-chip" href="/movies.html"><i class="fal fa-video fa-fw" style="color:#e42313"></i> Movies</a><a class="yb-chip" href="/television.html"><i class="fal fa-tv fa-fw" style="color:#8b5cf6"></i> TV</a><a class="yb-chip" href="/music.html"><i class="fal fa-music fa-fw" style="color:#0ea5e9"></i> Music</a><a class="yb-chip" href="/games.html"><i class="fal fa-gamepad fa-fw" style="color:#22c55e"></i> Games</a><a class="yb-chip" href="/software.html"><i class="fal fa-file fa-fw" style="color:#64748b"></i> Software</a><a class="yb-chip" href="/anime.html"><i class="fal fa-film-alt fa-fw" style="color:#ec4899"></i> Anime</a><a class="yb-chip" href="/ebooks.html"><i class="fal fa-book fa-fw" style="color:#f59e0b"></i> eBooks</a><a class="yb-chip" href="/pictures.html"><i class="fal fa-images fa-fw" style="color:#14b8a6"></i> Pictures</a><a class="yb-chip" href="/other.html"><i class="fal fa-ellipsis-h fa-fw" style="color:#6b7280"></i> Other</a></nav><div class="ad-box"><div class="ad-slot"><script data-cfasync="false" src="//greatdexchange.com/a/display.php?r=2645259"></script></div><div class="ad-note">Don't like banners? <a href="/?section=account&subsection=login">Log in</a> and we will make sure you see no banners. <a href="/?section=account&subsection=signup">For free.</a></div></div><div class="yb-error"><a class="seed seed-lost" href="/seed.html" title="Meet Seed, the YourBittorrent K-9" style="width:150px"><svg viewBox="0 0 200 200" role="img" aria-label="Seed lost the scent" xmlns="http://www.w3.org/2000/svg"><defs><filter id="sdlostg" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation=".7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><pattern id="sdlosts" width="4" height="3" patternUnits="userSpaceOnUse"><rect width="4" height="1" fill="#fff" opacity=".05"/></pattern></defs><path d="M76 146 C74 170 70 186 66 200 H134 C130 186 126 170 124 146Z" fill="#a86d38" class="sd-line"/><path d="M88 172 Q100 194 112 172 L118 200 H82Z" fill="#e3b27a"/><path d="M72.5 163 L76 150 L79.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M80.5 163 L84 150 L87.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M88.5 163 L92 150 L95.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M96.5 163 L100 150 L103.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M104.5 163 L108 150 L111.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M112.5 163 L116 150 L119.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M120.5 163 L124 150 L127.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><rect x="70" y="162" width="60" height="11" rx="3" fill="#221c1e" stroke="#56647a" stroke-width="1"/><path d="M100 173 L110 179 L110 191 L100 197 L90 191 L90 179Z" fill="#e42313" stroke="#9e1a0e" stroke-width="1"/><path d="M94 181 L96.5 185 L99 181 M96.5 185 V189 M101 181 V189 H103.5 Q106 189 106 187 Q106 185 103.5 185 H101 M101 181 H103 Q105.5 181 105.5 183 Q105.5 185 103.5 185" fill="none" stroke="#fff" stroke-width="1.2"/><g class=""><g transform="rotate(-10 100 120)"><path d="M60 82 L26 50 L40 52 L42 58 L86 60Z" fill="#b8793f" class="sd-line"/><path d="M62 76 L36 54 L78 62Z" fill="#7a4a2a"/><circle cx="40" cy="56" r="3" fill="none" stroke="#8a9bb0" stroke-width="1.6"/><path d="M142 80 L154 16 L110 58Z" fill="#3a4556" class="sd-line"/><path d="M140 70 L148 30 L118 58Z" fill="#262d3a"/><path d="M130 60 L145 40 M126 64 L141 46" stroke="#4b5870" stroke-width="1.4"/><path d="M154 16 L159 5" stroke="#6b7a90" stroke-width="1.8"/><circle class="sd-led" cx="159" cy="5" r="2.3" fill="#e42313"/><path d="M60 72 C70 56 86 50 100 50 C114 50 130 56 140 72 C150 86 154 102 150 116 C146 130 132 142 122 150 C114 158 106 164 100 164 C94 164 86 158 78 150 C68 142 54 130 50 116 C46 102 50 86 60 72Z" fill="#c98a4b" class="sd-line"/><ellipse cx="68" cy="122" rx="15" ry="11" fill="#e3b27a" opacity=".8"/><path d="M82 56 L86 40 L91 52 L96 33 L100 49 L104 33 L109 52 L114 40 L118 56Z" fill="#1c1a1f" class="sd-line"/><path d="M62 74 C72 58 86 52 100 52 C114 52 128 58 138 74 C128 80 116 84 100 84 C84 84 72 80 62 74Z" fill="#1c1a1f"/><path d="M100 60 C107 70 112 84 113 99 L87 99 C88 84 93 70 100 60Z" fill="#1c1a1f"/><path d="M100 58 V76 M100 64 L90 59 H85 M100 68 L110 63 H116" fill="none" stroke="#4b5566" stroke-width="1.2"/><path d="M120 116 L148 110 L141 136 L119 145Z" fill="#3a4556" stroke="#6b7a90" stroke-width="1"/><path d="M126 122 L140 119 M125 127 L139 124 M124 132 L138 129" stroke="#1c2330" stroke-width="1.6"/><circle class="sd-led" cx="128" cy="139" r="1.6" fill="#e42313"/><path d="M52 86 L100 99 L148 86 L146 110 Q100 106 54 110Z" fill="#10141c" stroke="#56647a" stroke-width="1.4"/><path d="M52 86 L100 99 L148 86 L146 110 Q100 106 54 110Z" fill="url(#sdlosts)"/><path d="M74 97 Q74 93 78 93 Q82 93 82 96.5 Q82 99 78.5 100.5 V102 M116 97 Q116 93 120 93 Q124 93 124 96.5 Q124 99 120.5 100.5 V102" fill="none" stroke="#ff4a3d" stroke-width="2.6" stroke-linecap="round" filter="url(#sdlostg)"/><circle cx="78.5" cy="105.5" r="1.6" fill="#ff4a3d"/><circle cx="120.5" cy="105.5" r="1.6" fill="#ff4a3d"/><path d="M58 89 L92 98" stroke="#fff" stroke-width="1.1" opacity=".18" fill="none"/><path d="M63 68 L71 86 M70 111 L77 127" stroke="#f3d2b5" stroke-width="2.4" stroke-linecap="round"/><path d="M64 76 L69 74 M66 81 L71 79 M71 117 L76 115 M73 122 L78 120" stroke="#2a1a10" stroke-width="1.1"/><path d="M84 118 C84 110 92 106 100 106 C108 106 116 110 116 118 L118 140 C114 150 106 154 100 154 C94 154 86 150 82 140Z" fill="#3a3236"/><path d="M100 132 V140 M100 140 Q93 143 87 142 M100 140 Q107 143 113 142" fill="none" stroke="#0d0c0f" stroke-width="2.2" stroke-linecap="round"/><path d="M91 122 C91 116 109 116 109 122 C109 128 103 131 100 132 C97 131 91 128 91 122Z" fill="#0d0c0f"/><ellipse cx="96" cy="120" rx="3" ry="1.5" fill="#fff" opacity=".45"/></g></g></svg></a><div class="yb-error-code">No results</div><h1>Nothing matched your search</h1><p>We couldn't find any torrents with that name. Try different or fewer keywords, check your spelling, or browse a category instead.</p><div class="yb-error-actions"><a class="btn btn-primary" href="/"><i class="fa fa-home fa-fw"></i>&nbsp; Back home</a><a class="btn btn-outline-secondary" href="/movies.html">Browse Movies</a></div></div>
+</div><footer style="text-align: center;"><p class="yb-friends" style="margin-bottom:6px">Friends: <a href="https://www.torlock.com" target="_blank" rel="noopener">Torlock</a> &middot; <a href="https://www.torrentfunk.com" target="_blank" rel="noopener">TorrentFunk</a> &middot; <a href="https://torrentela.com" target="_blank" rel="noopener">Torrentela</a> &middot; <a href="https://rawg.io" target="_blank" rel="noopener">RAWG</a></p><p><span class="yb-seedbadge"><a class="seed seed-duty" href="/seed.html" title="Meet Seed, the YourBittorrent K-9" style="width:34px"><svg viewBox="0 0 200 200" role="img" aria-label="Seed, our K-9, on patrol" xmlns="http://www.w3.org/2000/svg"><defs><filter id="sddutyg" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation=".7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><pattern id="sddutys" width="4" height="3" patternUnits="userSpaceOnUse"><rect width="4" height="1" fill="#fff" opacity=".05"/></pattern></defs><path d="M76 146 C74 170 70 186 66 200 H134 C130 186 126 170 124 146Z" fill="#a86d38" class="sd-line"/><path d="M88 172 Q100 194 112 172 L118 200 H82Z" fill="#e3b27a"/><path d="M72.5 163 L76 150 L79.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M80.5 163 L84 150 L87.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M88.5 163 L92 150 L95.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M96.5 163 L100 150 L103.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M104.5 163 L108 150 L111.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M112.5 163 L116 150 L119.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><path d="M120.5 163 L124 150 L127.5 163Z" fill="#aab6c8" stroke="#56647a" stroke-width=".6"/><rect x="70" y="162" width="60" height="11" rx="3" fill="#221c1e" stroke="#56647a" stroke-width="1"/><path d="M100 173 L110 179 L110 191 L100 197 L90 191 L90 179Z" fill="#e42313" stroke="#9e1a0e" stroke-width="1"/><path d="M94 181 L96.5 185 L99 181 M96.5 185 V189 M101 181 V189 H103.5 Q106 189 106 187 Q106 185 103.5 185 H101 M101 181 H103 Q105.5 181 105.5 183 Q105.5 185 103.5 185" fill="none" stroke="#fff" stroke-width="1.2"/><g class=""><g transform=""><path d="M58 80 L46 16 L58 30 L64 28 L90 58Z" fill="#b8793f" class="sd-line"/><path d="M60 70 L52 30 L82 58Z" fill="#7a4a2a"/><circle cx="50" cy="36" r="3" fill="none" stroke="#8a9bb0" stroke-width="1.6"/><circle cx="52" cy="47" r="3" fill="none" stroke="#8a9bb0" stroke-width="1.6"/><path d="M142 80 L154 16 L110 58Z" fill="#3a4556" class="sd-line"/><path d="M140 70 L148 30 L118 58Z" fill="#262d3a"/><path d="M130 60 L145 40 M126 64 L141 46" stroke="#4b5870" stroke-width="1.4"/><path d="M154 16 L159 5" stroke="#6b7a90" stroke-width="1.8"/><circle class="sd-led" cx="159" cy="5" r="2.3" fill="#e42313"/><path d="M60 72 C70 56 86 50 100 50 C114 50 130 56 140 72 C150 86 154 102 150 116 C146 130 132 142 122 150 C114 158 106 164 100 164 C94 164 86 158 78 150 C68 142 54 130 50 116 C46 102 50 86 60 72Z" fill="#c98a4b" class="sd-line"/><ellipse cx="68" cy="122" rx="15" ry="11" fill="#e3b27a" opacity=".8"/><path d="M82 56 L86 40 L91 52 L96 33 L100 49 L104 33 L109 52 L114 40 L118 56Z" fill="#1c1a1f" class="sd-line"/><path d="M62 74 C72 58 86 52 100 52 C114 52 128 58 138 74 C128 80 116 84 100 84 C84 84 72 80 62 74Z" fill="#1c1a1f"/><path d="M100 60 C107 70 112 84 113 99 L87 99 C88 84 93 70 100 60Z" fill="#1c1a1f"/><path d="M100 58 V76 M100 64 L90 59 H85 M100 68 L110 63 H116" fill="none" stroke="#4b5566" stroke-width="1.2"/><path d="M120 116 L148 110 L141 136 L119 145Z" fill="#3a4556" stroke="#6b7a90" stroke-width="1"/><path d="M126 122 L140 119 M125 127 L139 124 M124 132 L138 129" stroke="#1c2330" stroke-width="1.6"/><circle class="sd-led" cx="128" cy="139" r="1.6" fill="#e42313"/><path d="M52 86 L100 99 L148 86 L146 110 Q100 106 54 110Z" fill="#10141c" stroke="#56647a" stroke-width="1.4"/><path d="M52 86 L100 99 L148 86 L146 110 Q100 106 54 110Z" fill="url(#sddutys)"/><path d="M68 98 L88 103 M112 103 L132 98" stroke="#ff4a3d" stroke-width="4.5" stroke-linecap="round" filter="url(#sddutyg)"/><circle class="sd-scan" cx="64" cy="104" r="1.6" fill="#c9d3df" opacity=".75"/><path d="M58 89 L92 98" stroke="#fff" stroke-width="1.1" opacity=".18" fill="none"/><path d="M63 68 L71 86 M70 111 L77 127" stroke="#f3d2b5" stroke-width="2.4" stroke-linecap="round"/><path d="M64 76 L69 74 M66 81 L71 79 M71 117 L76 115 M73 122 L78 120" stroke="#2a1a10" stroke-width="1.1"/><path d="M84 118 C84 110 92 106 100 106 C108 106 116 110 116 118 L118 140 C114 150 106 154 100 154 C94 154 86 150 82 140Z" fill="#3a3236"/><path d="M100 132 V139 M100 139 Q93 145 87 142 M100 139 Q108 142 115 136" fill="none" stroke="#0d0c0f" stroke-width="2.2" stroke-linecap="round"/><path d="M107 140 L109.5 148 L112 139Z" fill="#f4f1ea" stroke="#0d0c0f" stroke-width=".6"/><path d="M91 122 C91 116 109 116 109 122 C109 128 103 131 100 132 C97 131 91 128 91 122Z" fill="#0d0c0f"/><ellipse cx="96" cy="120" rx="3" ry="1.5" fill="#fff" opacity=".45"/></g></g></svg></a><a href="/seed.html">Meet Seed, our K-9 from München</a></span></p><p>&copy; 2026 YourBittorrent. All Rights Reserved.</p><p>Loadtime: 0.004 sec. Queries: 3.</p></footer><script type="78d854b49674f403ef06429e-text/javascript">(function(){function apply(v){var g=v==='grid';document.body.classList.toggle('yb-gridview',g);var l=document.querySelector('.yb-vlist'),r=document.querySelector('.yb-vgrid');if(l)l.classList.toggle('on',!g);if(r)r.classList.toggle('on',g);}var saved=null;try{saved=localStorage.getItem('yb_view');}catch(e){}apply(window.__yb_nogrid?'list':(saved==='list'?'list':'grid'));document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.yb-toggle button');if(!b)return;var v=b.getAttribute('data-view');try{localStorage.setItem('yb_view',v);}catch(e){}apply(v);});})();</script><script type="78d854b49674f403ef06429e-text/javascript">(function(){var KEY='yb_recent',MAX=6;
+function read(){try{var a=JSON.parse(localStorage.getItem(KEY));return Array.isArray(a)?a:[];}catch(e){return [];}}
+function write(a){try{localStorage.setItem(KEY,JSON.stringify(a.slice(0,MAX)));}catch(e){}}
+function push(q){var a=read(),i;for(i=a.length-1;i>=0;i--){if(a[i].toLowerCase()===q.toLowerCase())a.splice(i,1);}a.unshift(q);write(a);}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function hideAll(){var n=document.querySelectorAll('.yb-search-recent'),i;for(i=0;i<n.length;i++)n[i].hidden=true;}
+function show(form){var a=read();if(!a.length){hideAll();return;}
+var p=form.querySelector('.yb-search-recent');
+if(!p){p=document.createElement('div');p.className='yb-search-recent';form.appendChild(p);}
+var h='<div class="yb-search-rh"><span>Recent searches</span><button type="button" data-clear="1">Clear</button></div>',i;
+for(i=0;i<a.length;i++)h+='<button type="button" class="yb-search-ri" data-q="'+esc(a[i])+'"><i class="fa fa-history"></i><span>'+esc(a[i])+'</span></button>';
+hideAll();p.innerHTML=h;p.hidden=false;}
+function sync(inp){var pill=inp.closest('.yb-search-pill');if(pill)pill.classList.toggle('has',inp.value.trim()!=='');}
+function near(t,sel){return t&&t.closest?t.closest(sel):null;}
+document.addEventListener('submit',function(e){var f=near(e.target,'.yb-search');if(!f)return;var q=f.querySelector('.yb-search-q').value.trim();if(q)push(q);});
+document.addEventListener('input',function(e){var i=near(e.target,'.yb-search-q');if(!i)return;sync(i);if(i.value.trim()!=='')hideAll();});
+document.addEventListener('focusin',function(e){var i=near(e.target,'.yb-search-q');if(!i){if(!near(e.target,'.yb-search'))hideAll();return;}if(i.value.trim()==='')show(i.closest('.yb-search'));});
+document.addEventListener('click',function(e){var f=near(e.target,'.yb-search');if(!f){hideAll();return;}
+if(near(e.target,'.yb-search-x')){var i=f.querySelector('.yb-search-q');i.value='';sync(i);i.focus();show(f);return;}
+if(near(e.target,'[data-clear]')){write([]);hideAll();return;}
+var r=near(e.target,'.yb-search-ri');if(r){var q=f.querySelector('.yb-search-q');q.value=r.getAttribute('data-q');sync(q);hideAll();if(f.requestSubmit)f.requestSubmit();else f.submit();}});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')hideAll();});
+})();</script><script type="78d854b49674f403ef06429e-text/javascript">var _Hasync= _Hasync|| []; _Hasync.push(['Histats.start', '1,3600441,4,0,0,0,00010000']);_Hasync.push(['Histats.fasi', '1']);_Hasync.push(['Histats.track_hits', '']); (function() { var hs = document.createElement('script'); hs.async = true; hs.src = ('//s10.histats.com/js15_as.js'); ( document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(hs); })();</script><script data-cfasync="false">(function(){if(!window.Intl)return;var n=Date.now(),y=new Date().getFullYear(),
+D=new Intl.DateTimeFormat(void 0,{month:"2-digit",day:"2-digit"}),Y=new Intl.DateTimeFormat(void 0,{year:"2-digit",month:"2-digit",day:"2-digit"}),
+F=new Intl.DateTimeFormat(void 0,{dateStyle:"medium",timeStyle:"short"}),G=new Intl.DateTimeFormat(void 0,{dateStyle:"medium"}),
+e=document.querySelectorAll("time[data-ld]");for(var i=0;i<e.length;i++){var s=e[i].getAttribute("datetime")||"",b=s.length==10,
+d=b?new Date(+s.slice(0,4),s.slice(5,7)-1,+s.slice(8,10)):new Date(s);if(isNaN(d)||n-d<864e5)continue;
+e[i].textContent=d.getFullYear()===y?D.format(d):Y.format(d);e[i].title=(b?G:F).format(d);}})();</script><foreignObject><script src="/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js" data-cf-settings="78d854b49674f403ef06429e-|49" defer></script></foreignObject></body></html>

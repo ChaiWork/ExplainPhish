@@ -64,6 +64,17 @@ def detect_format(file_path: str | Path) -> str | None:
     if _looks_like_html(header):
         return "html"
 
+    # ── 5. File extension fallback ───────────────────────────────────────────
+    ext = path.suffix.lower()
+    if ext in (".html", ".htm"):
+        return "html"
+    if ext == ".pdf":
+        return "pdf"
+    if ext in (".docx", ".doc"):
+        return "word"
+    if ext in (".xlsx", ".xlsb", ".xls"):
+        return "excel"
+
     return None   # unknown
 
 
