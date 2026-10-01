@@ -23,6 +23,12 @@ def select_features(X_train, y_train, fmt, logger):
     mode = cfg.FEATURE_SELECTION_MODE
     provided = cfg.PROVIDED_FEATURES.get(fmt) or []
 
+    # ---- Mode All: use all features from original dataset
+    if mode == "all":
+        cols = list(X_train.columns)
+        logger.info(f"Feature selection mode 'all': using all {len(cols)} features from original dataset.")
+        return cols, {"mode": "all", "n_features": len(cols)}, None
+
     # ---- Mode A
     if mode == "provided" or (mode == "auto" and provided):
         if not provided:

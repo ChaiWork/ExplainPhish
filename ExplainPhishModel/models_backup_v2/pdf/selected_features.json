@@ -1,0 +1,43 @@
+{
+  "mode": "own (train-only importance + SHAP)",
+  "n_features": 32,
+  "score_columns": [
+    "xgb_importance",
+    "rf_importance",
+    "xgb_mean_abs_shap"
+  ],
+  "selected_features": [
+    "text_length",
+    "xfa_count",
+    "object_count",
+    "file_size",
+    "metadata_size",
+    "title_chars",
+    "total_filters",
+    "has_multiple_behavioral_keywords_in_one_object",
+    "javascript_count",
+    "font_object_count",
+    "entropy_of_streams",
+    "image_count",
+    "aa_count",
+    "average_stream_size",
+    "js_count",
+    "stream_count",
+    "endstream_count",
+    "uses_nonstandard_port",
+    "page_count",
+    "acroform_count",
+    "openaction_count",
+    "valid_pdf_header",
+    "used_ocr",
+    "name_obfuscations",
+    "objstm_count",
+    "nested_filter_objects",
+    "uri_count",
+    "action_count",
+    "encrypted",
+    "launch_count",
+    "colors_count",
+    "richmedia_count"
+  ]
+}

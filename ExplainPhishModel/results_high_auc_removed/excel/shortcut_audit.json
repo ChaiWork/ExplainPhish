@@ -1,0 +1,117 @@
+{
+  "format": "excel",
+  "n_train_samples": 4766,
+  "n_features_evaluated": 42,
+  "likely_shortcut": true,
+  "shortcut_criteria": {
+    "any_depth1_stump_cv_f1_ge_0_99": false,
+    "top_feature_importance_ge_0_90": true
+  },
+  "decision_tree_diagnostics": {
+    "fitted_depth": 4,
+    "fitted_leaves": 7,
+    "top_feature": "macro_chr_count",
+    "top_feature_importance_share": 0.9068
+  },
+  "high_auc_features_found": [
+    "macro_chr_count",
+    "macro_arithmetic_operator_count",
+    "macro_token_count",
+    "macro_vocab_size"
+  ],
+  "high_auc_features_removed": [
+    "macro_chr_count",
+    "macro_arithmetic_operator_count",
+    "macro_token_count",
+    "macro_vocab_size"
+  ],
+  "n_features_surviving": 38,
+  "missingness_audit": {
+    "columns_with_missing": []
+  },
+  "near_perfect_correlations_count": 4,
+  "near_perfect_correlations": [
+    {
+      "feature_1": "has_macro",
+      "feature_2": "macro_count",
+      "correlation": 1.0
+    },
+    {
+      "feature_1": "macro_token_count",
+      "feature_2": "macro_vocab_size",
+      "correlation": 1.0
+    },
+    {
+      "feature_1": "non_empty_cells",
+      "feature_2": "macro_line_count",
+      "correlation": 0.99617
+    },
+    {
+      "feature_1": "avg_cell_length",
+      "feature_2": "macro_average_line_length",
+      "correlation": 0.98878
+    }
+  ],
+  "top_10_features_by_auc": [
+    {
+      "feature": "file_size",
+      "single_feature_auc": 0.61983,
+      "stump_cv_f1_mean": 0.67458,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "sheet_count",
+      "single_feature_auc": 0.54703,
+      "stump_cv_f1_mean": 0.29993,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "max_rows",
+      "single_feature_auc": 0.93695,
+      "stump_cv_f1_mean": 0.91656,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "max_cols",
+      "single_feature_auc": 0.61453,
+      "stump_cv_f1_mean": 0.58196,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "total_cells",
+      "single_feature_auc": 0.87442,
+      "stump_cv_f1_mean": 0.8553,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "non_empty_cells",
+      "single_feature_auc": 0.97886,
+      "stump_cv_f1_mean": 0.94673,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "numeric_cell_count",
+      "single_feature_auc": 0.98033,
+      "stump_cv_f1_mean": 0.9434,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "string_cell_count",
+      "single_feature_auc": 0.98155,
+      "stump_cv_f1_mean": 0.95345,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "formula_count",
+      "single_feature_auc": 0.65137,
+      "stump_cv_f1_mean": 0.72876,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "hyperlink_count",
+      "single_feature_auc": 0.517,
+      "stump_cv_f1_mean": 0.06565,
+      "high_auc_flag": false
+    }
+  ]
+}

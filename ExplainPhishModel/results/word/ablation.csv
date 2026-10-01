@@ -1,0 +1,16 @@
+Format,Variant,Model,N_Features,CV_F1_Mean,CV_F1_Std,CV_AUC_Mean,CV_AUC_Std,CV_Accuracy_Mean,CV_Precision_Mean,CV_Recall_Mean,CV_FPR_Mean,Test_F1 (not used for selection),Test_AUC (not used for selection),Test_Accuracy (not used for selection),Test_FPR (not used for selection)
+Word,a_baseline,XGBoost,43,0.9999,0.0003,1.0,0.0,0.9999,1.0,0.9997,0.0,1.0,1.0,1.0,0.0
+Word,a_baseline,Random Forest,43,1.0,0.0,1.0,0.0,1.0,1.0,1.0,0.0,1.0,1.0,1.0,0.0
+Word,a_baseline,Decision Tree,43,1.0,0.0,1.0,0.0,1.0,1.0,1.0,0.0,1.0,1.0,1.0,0.0
+Word,b_without_macro_ole_dde,XGBoost,38,0.9996,0.0003,1.0,0.0,0.9996,0.9997,0.9995,0.0003,1.0,1.0,1.0,0.0
+Word,b_without_macro_ole_dde,Random Forest,38,0.9999,0.0003,1.0,0.0,0.9999,0.9997,1.0,0.0003,1.0,1.0,1.0,0.0
+Word,b_without_macro_ole_dde,Decision Tree,38,0.9991,0.0006,0.9999,0.0003,0.9991,0.9997,0.9985,0.0003,0.9996,1.0,0.9996,0.0
+Word,c_without_format_proxies,XGBoost,38,0.9999,0.0003,1.0,0.0,0.9999,1.0,0.9997,0.0,1.0,1.0,1.0,0.0
+Word,c_without_format_proxies,Random Forest,38,1.0,0.0,1.0,0.0,1.0,1.0,1.0,0.0,1.0,1.0,1.0,0.0
+Word,c_without_format_proxies,Decision Tree,38,1.0,0.0,1.0,0.0,1.0,1.0,1.0,0.0,1.0,1.0,1.0,0.0
+Word,d_without_macro_and_proxies,XGBoost,33,1.0,0.0,1.0,0.0,1.0,1.0,1.0,0.0,0.9998,1.0,0.9998,0.0004
+Word,d_without_macro_and_proxies,Random Forest,33,1.0,0.0,1.0,0.0,1.0,1.0,1.0,0.0,1.0,1.0,1.0,0.0
+Word,d_without_macro_and_proxies,Decision Tree,33,1.0,0.0,1.0,0.0,1.0,1.0,1.0,0.0,0.9998,0.9998,0.9998,0.0004
+Word,e_without_audit_flagged,XGBoost,33,0.9997,0.0003,1.0,0.0,0.9997,0.9995,1.0,0.0005,1.0,1.0,1.0,0.0
+Word,e_without_audit_flagged,Random Forest,33,1.0,0.0,1.0,0.0,1.0,1.0,1.0,0.0,1.0,1.0,1.0,0.0
+Word,e_without_audit_flagged,Decision Tree,33,0.9995,0.0005,0.9996,0.0004,0.9995,0.999,1.0,0.001,0.9991,0.9994,0.9991,0.0019

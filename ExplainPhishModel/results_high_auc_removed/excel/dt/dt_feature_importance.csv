@@ -1,0 +1,11 @@
+feature,importance
+entropy_of_text,0.8878321172290139
+macro_max_line_length,0.1118338369042129
+numeric_cell_count,0.00033404586677312804
+non_empty_cells,0.0
+string_cell_count,0.0
+macro_line_count,0.0
+max_rows,0.0
+remote_template_present,0.0
+macro_count_parentheses,0.0
+macro_max_arithmetic_ops,0.0

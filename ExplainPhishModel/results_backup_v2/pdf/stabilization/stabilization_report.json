@@ -1,0 +1,111 @@
+{
+  "format": "pdf",
+  "rows_before_cleaning": 19296,
+  "columns_before_cleaning": 42,
+  "label_column": "label",
+  "label_check": {
+    "raw_label_values": {
+      "1": 9999,
+      "0": 9297
+    },
+    "unexpected_labels": {},
+    "rows_with_unexpected_labels": 0
+  },
+  "exact_duplicates_found": 0,
+  "exact_duplicates_removed": 0,
+  "id_like_columns_to_review": [
+    "name_obfuscations"
+  ],
+  "dtype_counts": {
+    "numeric": 40
+  },
+  "feature_duplicates_found": 3943,
+  "feature_duplicates_removed": 3943,
+  "conflicting_label_rows": 0,
+  "total_missing_cells": 0,
+  "columns_with_missing": 0,
+  "leakage_findings": [],
+  "columns_with_outliers": 13,
+  "rows_after_cleaning": 15353,
+  "columns_after_cleaning": 32,
+  "removed_columns": [
+    {
+      "column": "label",
+      "reason": "target column"
+    },
+    {
+      "column": "__source_file__",
+      "reason": "source file name (would leak the label if files are split by class)"
+    },
+    {
+      "column": "file_path",
+      "reason": "file path/name identifier column"
+    },
+    {
+      "column": "embedded_file_count",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "average_embedded_file_size",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "xref_count",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "xref_entries",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "submitform_count",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "jbig2decode_count",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "trailer_count",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "startxref_count",
+      "reason": "constant column (single value)"
+    }
+  ],
+  "feature_columns": [
+    "file_size",
+    "title_chars",
+    "encrypted",
+    "metadata_size",
+    "page_count",
+    "valid_pdf_header",
+    "image_count",
+    "text_length",
+    "object_count",
+    "font_object_count",
+    "stream_count",
+    "endstream_count",
+    "average_stream_size",
+    "entropy_of_streams",
+    "name_obfuscations",
+    "total_filters",
+    "nested_filter_objects",
+    "objstm_count",
+    "js_count",
+    "javascript_count",
+    "uri_count",
+    "uses_nonstandard_port",
+    "action_count",
+    "aa_count",
+    "openaction_count",
+    "launch_count",
+    "acroform_count",
+    "xfa_count",
+    "colors_count",
+    "richmedia_count",
+    "has_multiple_behavioral_keywords_in_one_object",
+    "used_ocr"
+  ]
+}

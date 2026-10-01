@@ -1,0 +1,32 @@
+09:40:22 | INFO | ======================================================================
+09:40:22 | INFO | Running Ablation Experiments for Word
+09:40:22 | INFO | ======================================================================
+09:40:22 | INFO | Loaded Word_All_features.csv: 20000 rows x 44 columns
+09:40:22 | INFO | Label column detected: 'label'
+09:40:22 | INFO | Label distribution after normalisation: {0: 10000, 1: 10000} (0=Benign, 1=Malicious)
+09:40:22 | INFO | Exact duplicate rows preserved (3395 duplicates) - using original dataset
+09:40:22 | WARNING | Columns with ID-like names kept (numeric, not unique) - please review: ['struct_name']
+09:40:22 | INFO | Duplicate feature rows removed: 3395
+09:40:22 | INFO | Missing values handled by median imputation (fitted on training set)
+09:40:22 | INFO | Missing cells: 225310 in 30 columns
+09:40:22 | INFO | Constant columns removed: []
+09:40:23 | INFO | Columns containing IQR outliers (kept, see suspicious_outliers.csv): 5
+09:40:23 | INFO | Stabilization finished: 20000 -> 16605 rows, 44 -> 43 feature columns
+09:40:23 | INFO | Original class distribution: Benign=6605 (39.78%), Malicious=10000 (60.22%)
+09:40:23 | INFO | Not balanced -> undersampled majority class to 6605 rows.
+09:40:23 | INFO | Final class distribution: Benign=6605, Malicious=6605
+09:40:23 | INFO | ============================================================
+09:40:23 | INFO | [WORD] Running Shortcut & Leakage Audit on TRAIN only (7926 rows)
+09:40:23 | INFO | ============================================================
+09:40:25 | WARNING |   [SHORTCUT WARNING] WORD data exhibits likely shortcut learning! Any stump CV F1 >= 0.99: True | Top feature 'ole_object_count' holds 100.0% of tree importance.
+09:40:25 | INFO |   Shortcut audit saved to D:\codingProject\ExplainPhish\ExplainPhishModel\results\word\shortcut_audit.json and .csv
+09:40:25 | INFO | Total cleaned features available: 43
+09:40:25 | INFO | Matched macro/OLE/DDE features (5): ['ole_object_count', 'ole_object_type_count', 'macro_present', 'dde_present', 'vba_keywords_count']
+09:40:25 | INFO | Matched format proxy features (5): ['entropy', 'struct_ContentType', 'struct_PartName', 'file_size', 'struct_pos']
+09:40:25 | INFO | Audit-flagged high-risk features (10): ['ole_object_count', 'ole_object_type_count', 'macro_present', 'dde_present', 'vba_keywords_count', 'entropy', 'struct_ContentType', 'struct_PartName', 'file_size', 'struct_val']
+09:40:25 | INFO | --- Evaluating Variant: a_baseline (43 features) ---
+09:40:30 | INFO | --- Evaluating Variant: b_without_macro_ole_dde (38 features) ---
+09:40:36 | INFO | --- Evaluating Variant: c_without_format_proxies (38 features) ---
+09:40:41 | INFO | --- Evaluating Variant: d_without_macro_and_proxies (33 features) ---
+09:40:46 | INFO | --- Evaluating Variant: e_without_audit_flagged (33 features) ---
+09:40:51 | INFO | Saved ablation results to: D:\codingProject\ExplainPhish\ExplainPhishModel\results\word\ablation.csv

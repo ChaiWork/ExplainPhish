@@ -1,0 +1,13 @@
+column,reason
+label,target column
+__source_file__,source file name (would leak the label if files are split by class)
+file_path,file path/name identifier column
+ocr_extracted_text_length,constant column (single value)
+preview_image_text_entropy,constant column (single value)
+deceptive_keywords_count_ocr,constant column (single value)
+macro_callbyname_count,constant column (single value)
+preview_image_width,constant column (single value)
+preview_image_height,constant column (single value)
+macro_chr_count,leakage: feature alone separates the classes
+macro_token_count,leakage: feature alone separates the classes
+macro_vocab_size,leakage: feature alone separates the classes

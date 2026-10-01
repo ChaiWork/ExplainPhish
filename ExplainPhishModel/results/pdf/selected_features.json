@@ -8,14 +8,14 @@
   ],
   "selected_features": [
     "text_length",
+    "xfa_count",
     "object_count",
     "file_size",
     "metadata_size",
     "title_chars",
     "total_filters",
-    "entropy_of_streams",
-    "stream_count",
-    "endstream_count",
-    "valid_pdf_header"
+    "has_multiple_behavioral_keywords_in_one_object",
+    "javascript_count",
+    "font_object_count"
   ]
 }

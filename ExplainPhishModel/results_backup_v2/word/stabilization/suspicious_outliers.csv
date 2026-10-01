@@ -1,0 +1,5 @@
+column,lower_fence,upper_fence,n_outliers,pct_outliers,min,max
+path_w-r,-81.0,115.0,380,5.753,0.0,846000.0
+path_/w-r,-81.0,115.0,380,5.753,0.0,846000.0
+path_w-p,-81.0,115.0,156,2.362,0.0,17029.0
+path_/w-p,-81.0,115.0,150,2.271,0.0,17029.0

@@ -1,0 +1,11 @@
+feature,mean_abs_shap
+entropy_of_text,0.2087996470440916
+string_cell_count,0.07330995656793657
+non_empty_cells,0.04451622070877901
+numeric_cell_count,0.03901974611355124
+remote_template_present,0.038517588154409706
+macro_max_line_length,0.03818045882690604
+macro_line_count,0.033928587468880556
+max_rows,0.015498644783949501
+macro_max_arithmetic_ops,0.01242936693884832
+macro_count_parentheses,0.007038553317876988

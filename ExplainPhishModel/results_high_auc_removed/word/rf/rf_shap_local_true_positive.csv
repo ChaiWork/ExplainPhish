@@ -1,0 +1,11 @@
+actual,predicted,probability_malicious,feature,feature_value,shap_value
+1,1,0.9997,struct_pos,9.0,0.19058517456405413
+1,1,0.9997,path_a-accent3,1.0,0.08950463443508434
+1,1,0.9997,path_a-hlink,1.0,0.08795035905885581
+1,1,0.9997,path_/w-p,15.0,0.04729764577695766
+1,1,0.9997,path_w-r,16.0,0.04300611458658798
+1,1,0.9997,path_w-p,16.0,0.03890056981184776
+1,1,0.9997,path_/w-r,16.0,0.02837541867055581
+1,1,0.9997,struct_typeface,100.0,-0.017517838833730596
+1,1,0.9997,struct_script,94.0,-0.011661494173857877
+1,1,0.9997,struct_{http://schemas.openxmlformats.org/wordprocessingml/2006/main}themeFill,938.0,0.003288213713014109

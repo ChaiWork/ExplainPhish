@@ -1,0 +1,44 @@
+[
+  {
+    "Format": "Word",
+    "Model": "XGBoost",
+    "Accuracy": 1.0,
+    "Precision": 1.0,
+    "Recall": 1.0,
+    "F1": 1.0,
+    "ROC-AUC": 1.0,
+    "FPR": 0.0,
+    "TN": 2642,
+    "FP": 0,
+    "FN": 0,
+    "TP": 2642
+  },
+  {
+    "Format": "Word",
+    "Model": "Random Forest",
+    "Accuracy": 1.0,
+    "Precision": 1.0,
+    "Recall": 1.0,
+    "F1": 1.0,
+    "ROC-AUC": 1.0,
+    "FPR": 0.0,
+    "TN": 2642,
+    "FP": 0,
+    "FN": 0,
+    "TP": 2642
+  },
+  {
+    "Format": "Word",
+    "Model": "Decision Tree",
+    "Accuracy": 1.0,
+    "Precision": 1.0,
+    "Recall": 1.0,
+    "F1": 1.0,
+    "ROC-AUC": 1.0,
+    "FPR": 0.0,
+    "TN": 2642,
+    "FP": 0,
+    "FN": 0,
+    "TP": 2642
+  }
+]

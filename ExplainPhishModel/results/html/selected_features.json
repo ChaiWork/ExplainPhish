@@ -8,17 +8,17 @@
   ],
   "selected_features": [
     "url_punct_char_count",
-    "external_link_count",
-    "embedded_js_count",
     "tag_count",
+    "embedded_js_count",
+    "external_links_count",
+    "external_link_count",
     "whitespace_ratio",
+    "keywords_to_words_ratio",
     "internal_link_count",
-    "form_count",
     "script_entropy",
-    "entropy",
-    "total_script_characters",
+    "form_count",
     "min_link_length",
-    "url_digit_count",
-    "html_whitespace_ratio"
+    "script_count",
+    "unique_tag_count"
   ]
 }

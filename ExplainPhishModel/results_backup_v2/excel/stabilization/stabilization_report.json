@@ -1,0 +1,169 @@
+{
+  "format": "excel",
+  "rows_before_cleaning": 20000,
+  "columns_before_cleaning": 50,
+  "label_column": "label",
+  "label_check": {
+    "raw_label_values": {
+      "1": 10000,
+      "0": 10000
+    },
+    "unexpected_labels": {},
+    "rows_with_unexpected_labels": 0
+  },
+  "exact_duplicates_found": 0,
+  "exact_duplicates_removed": 0,
+  "id_like_columns_to_review": [],
+  "dtype_counts": {
+    "numeric": 48
+  },
+  "feature_duplicates_found": 6028,
+  "feature_duplicates_removed": 6028,
+  "conflicting_label_rows": 0,
+  "total_missing_cells": 0,
+  "columns_with_missing": 0,
+  "leakage_findings": [
+    {
+      "column": "non_empty_cells",
+      "check": "single-feature AUC",
+      "value": 0.98047,
+      "remove": false
+    },
+    {
+      "column": "numeric_cell_count",
+      "check": "single-feature AUC",
+      "value": 0.98121,
+      "remove": false
+    },
+    {
+      "column": "string_cell_count",
+      "check": "single-feature AUC",
+      "value": 0.98274,
+      "remove": false
+    },
+    {
+      "column": "macro_line_count",
+      "check": "single-feature AUC",
+      "value": 0.98013,
+      "remove": false
+    },
+    {
+      "column": "macro_chr_count",
+      "check": "single-feature AUC",
+      "value": 0.99336,
+      "remove": true
+    },
+    {
+      "column": "macro_arithmetic_operator_count",
+      "check": "single-feature AUC",
+      "value": 0.98499,
+      "remove": false
+    },
+    {
+      "column": "macro_token_count",
+      "check": "single-feature AUC",
+      "value": 0.99028,
+      "remove": true
+    },
+    {
+      "column": "macro_vocab_size",
+      "check": "single-feature AUC",
+      "value": 0.99028,
+      "remove": true
+    }
+  ],
+  "columns_with_outliers": 17,
+  "rows_after_cleaning": 13972,
+  "columns_after_cleaning": 39,
+  "removed_columns": [
+    {
+      "column": "label",
+      "reason": "target column"
+    },
+    {
+      "column": "__source_file__",
+      "reason": "source file name (would leak the label if files are split by class)"
+    },
+    {
+      "column": "file_path",
+      "reason": "file path/name identifier column"
+    },
+    {
+      "column": "ocr_extracted_text_length",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "preview_image_text_entropy",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "deceptive_keywords_count_ocr",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "macro_callbyname_count",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "preview_image_width",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "preview_image_height",
+      "reason": "constant column (single value)"
+    },
+    {
+      "column": "macro_chr_count",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "macro_token_count",
+      "reason": "leakage: feature alone separates the classes"
+    },
+    {
+      "column": "macro_vocab_size",
+      "reason": "leakage: feature alone separates the classes"
+    }
+  ],
+  "feature_columns": [
+    "file_size",
+    "sheet_count",
+    "max_rows",
+    "max_cols",
+    "total_cells",
+    "non_empty_cells",
+    "numeric_cell_count",
+    "string_cell_count",
+    "formula_count",
+    "hyperlink_count",
+    "avg_cell_length",
+    "entropy_of_text",
+    "base64_pattern_count",
+    "hex_pattern_count",
+    "has_macro",
+    "remote_template_present",
+    "macro_line_count",
+    "macro_procedure_count",
+    "macro_string_function_count",
+    "macro_arithmetic_operator_count",
+    "macro_concatenation_count",
+    "macro_comment_lines",
+    "macro_average_line_length",
+    "macro_count",
+    "uses_file_api",
+    "uses_network_api",
+    "uses_process_api",
+    "merged_cells_count",
+    "hidden_sheets_count",
+    "protected_sheets_count",
+    "named_ranges_count",
+    "empty_sheet_count",
+    "rich_text_formatting_count",
+    "macro_count_parentheses",
+    "macro_count_assignments",
+    "macro_max_line_length",
+    "macro_max_string_literals",
+    "macro_max_arithmetic_ops",
+    "macro_max_concat_ops"
+  ]
+}

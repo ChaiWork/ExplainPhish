@@ -1,20 +1,21 @@
 {
   "mode": "own (train-only importance + SHAP)",
-  "n_features": 9,
+  "n_features": 10,
   "score_columns": [
     "xgb_importance",
     "rf_importance",
     "xgb_mean_abs_shap"
   ],
   "selected_features": [
-    "entropy_of_text",
+    "macro_chr_count",
     "macro_vocab_size",
+    "entropy_of_text",
     "macro_max_line_length",
-    "macro_token_count",
     "macro_arithmetic_operator_count",
+    "macro_token_count",
     "numeric_cell_count",
     "string_cell_count",
-    "remote_template_present",
-    "avg_cell_length"
+    "macro_line_count",
+    "non_empty_cells"
   ]
 }

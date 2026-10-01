@@ -1,4 +1,6 @@
 """Metrics, confusion matrices, feature-importance files and the comparison table."""
+from pathlib import Path
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -50,16 +52,19 @@ def save_feature_importance(model, feature_names, csv_path, png_path, title):
     return table
 
 
-def aggregate_all_formats():
+def aggregate_all_formats(results_dir=None):
     """Combine results/<format>/metrics.csv of every trained format into model_comparison.*"""
+    if results_dir is None:
+        results_dir = cfg.RESULTS_DIR
+    results_dir = Path(results_dir)
     frames = []
     for fmt in cfg.FORMATS:
-        path = cfg.RESULTS_DIR / fmt / "metrics.csv"
+        path = results_dir / fmt / "metrics.csv"
         if path.exists():
             frames.append(pd.read_csv(path))
     if not frames:
         return None
     table = pd.concat(frames, ignore_index=True)
-    table.to_csv(cfg.RESULTS_DIR / "model_comparison.csv", index=False)
-    save_json(table.to_dict(orient="records"), cfg.RESULTS_DIR / "model_comparison.json")
+    table.to_csv(results_dir / "model_comparison.csv", index=False)
+    save_json(table.to_dict(orient="records"), results_dir / "model_comparison.json")
     return table

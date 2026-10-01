@@ -45,21 +45,21 @@ LEAKAGE_EXACT_NAMES = {"label", "labels", "class", "target", "y", "verdict",
                        "is_malicious", "malicious", "is_phishing", "benign",
                        "category", "type", "family", "malware_type", "attack_type"}
 
-MAX_MISSING_COLUMN_FRACTION = 0.50   # drop a column if more than 50% is missing
+# --------------------------------------------------- duplicate & leakage handling
+DROP_EXACT_DUPLICATES = False        # Keep all rows from original dataset
+DROP_FEATURE_DUPLICATES = True       # Filter duplicate feature rows
+DROP_CONFLICTING_LABEL_ROWS = True   # Identical features but different labels (label noise)
+
+LEAKAGE_AUC_REMOVE = 0.985           # Features with train single-feature AUC >= this are flagged high-risk
+LEAKAGE_AUC_WARN = 0.98              # Warn threshold
+REMOVE_HIGH_AUC_FEATURES = False     # Default False; set True to drop train-flagged high-AUC features (requires >= 3 left)
+
+# ------------------------------------------------------ missing value handling
+MISSING_STRATEGY = "median"          # "median" (impute using train median) or "remove" (drop rows/columns with missing values)
+DROP_COLUMNS_WITH_HIGH_MISSING = False  # Set to True to drop columns exceeding MAX_MISSING_COLUMN_FRACTION
+MAX_MISSING_COLUMN_FRACTION = 0.50   # drop a column if more than 50% is missing (if DROP_COLUMNS_WITH_HIGH_MISSING is True)
 MAX_CATEGORICAL_LEVELS = 50          # text columns with more levels are treated as identifiers
 MAX_CATEGORICAL_UNIQUE_RATIO = 0.50
-
-LEAKAGE_AUC_REMOVE = 0.985           # one feature alone separates classes this well -> removed
-LEAKAGE_AUC_WARN = 0.98              # warn only
-REMOVE_STATISTICAL_LEAKAGE = True
-
-# Per-format override for the remove threshold.  Use 1.001 to effectively
-# disable removal for a format whose dataset is too synthetic to survive
-# a strict cut.  Word no longer needs an override: with 44 raw columns,
-# the standard 0.985 threshold removes ~11 format-proxy features and
-# leaves ~24 genuine content features for selection.
-LEAKAGE_AUC_REMOVE_OVERRIDE = {}
-DROP_CONFLICTING_LABEL_ROWS = True   # identical features but different labels
 
 OUTLIER_IQR_MULTIPLIER = 3.0         # outliers are REPORTED, never deleted
 SAVE_CLEANED_DATASET = False
@@ -76,36 +76,41 @@ FEATURE_SELECTION_MODE = "auto"
 # Mode A: paste the dataset authors' feature names here (must exist as columns).
 PROVIDED_FEATURES = {"pdf": [], "word": [], "excel": [], "html": []}
 
-# Mode B: how many features to keep after leakage removal.
+# Mode B: how many features to keep in feature selection Mode B.
 TOP_N_FEATURES = {"pdf": 10, "word": 10, "excel": 10, "html": 13}
 SHAP_SELECTION_SAMPLES = 2000        # train rows used for SHAP ranking
 
 # ------------------------------------------------------------ model settings
-XGB_PARAMS = dict( n_estimators=300,
+XGB_PARAMS = dict(
+    n_estimators=300,
     max_depth=5,
     learning_rate=0.06,
     subsample=0.85,
     colsample_bytree=0.8,
+    min_child_weight=3,
     reg_alpha=0.1,
     reg_lambda=1.5,
     eval_metric="logloss",
     random_state=RANDOM_STATE,
-    n_jobs=-1,)
+    n_jobs=-1,
+)
 
-
-RF_PARAMS = dict(   n_estimators=250,
-    max_depth=16,
+RF_PARAMS = dict(
+    n_estimators=300,
+    max_depth=12,
     min_samples_leaf=2,
+    min_samples_split=10,
     max_features="sqrt",
     random_state=RANDOM_STATE,
     n_jobs=-1,
-    
-    )
+)
 
-DT_PARAMS = dict(    max_depth=7,
+DT_PARAMS = dict(
+    max_depth=7,
     min_samples_leaf=10,
     min_samples_split=20,
-    random_state=RANDOM_STATE,)
+    random_state=RANDOM_STATE,
+)
 
 # Optional grid search (5-fold CV on the training set only). Off by default.
 TUNE_HYPERPARAMETERS = False

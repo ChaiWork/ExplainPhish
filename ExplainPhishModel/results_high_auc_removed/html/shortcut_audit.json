@@ -1,0 +1,92 @@
+{
+  "format": "html",
+  "n_train_samples": 6942,
+  "n_features_evaluated": 40,
+  "likely_shortcut": false,
+  "shortcut_criteria": {
+    "any_depth1_stump_cv_f1_ge_0_99": false,
+    "top_feature_importance_ge_0_90": false
+  },
+  "decision_tree_diagnostics": {
+    "fitted_depth": 27,
+    "fitted_leaves": 589,
+    "top_feature": "url_punct_char_count",
+    "top_feature_importance_share": 0.36003
+  },
+  "high_auc_features_found": [],
+  "high_auc_features_removed": [],
+  "n_features_surviving": 40,
+  "missingness_audit": {
+    "columns_with_missing": []
+  },
+  "near_perfect_correlations_count": 1,
+  "near_perfect_correlations": [
+    {
+      "feature_1": "external_links_count",
+      "feature_2": "external_link_count",
+      "correlation": 1.0
+    }
+  ],
+  "top_10_features_by_auc": [
+    {
+      "feature": "file_size",
+      "single_feature_auc": 0.75914,
+      "stump_cv_f1_mean": 0.68996,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "line_count",
+      "single_feature_auc": 0.79105,
+      "stump_cv_f1_mean": 0.7473,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "entropy",
+      "single_feature_auc": 0.53217,
+      "stump_cv_f1_mean": 0.27106,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "script_entropy",
+      "single_feature_auc": 0.68027,
+      "stump_cv_f1_mean": 0.64315,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "tag_count",
+      "single_feature_auc": 0.82261,
+      "stump_cv_f1_mean": 0.78112,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "unique_tag_count",
+      "single_feature_auc": 0.79379,
+      "stump_cv_f1_mean": 0.75592,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "script_count",
+      "single_feature_auc": 0.79482,
+      "stump_cv_f1_mean": 0.70928,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "form_count",
+      "single_feature_auc": 0.57501,
+      "stump_cv_f1_mean": 0.66838,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "iframe_count",
+      "single_feature_auc": 0.59795,
+      "stump_cv_f1_mean": 0.68458,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "hidden_iframe_count",
+      "single_feature_auc": 0.59494,
+      "stump_cv_f1_mean": 0.70187,
+      "high_auc_flag": false
+    }
+  ]
+}

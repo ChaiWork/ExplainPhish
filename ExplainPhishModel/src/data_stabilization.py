@@ -242,9 +242,15 @@ def stabilize(df, fmt, out_dir, logger):
     combined = df.copy()
     combined["__y__"] = y
     dup_mask = combined.duplicated(keep="first")
-    report["exact_duplicates_removed"] = int(dup_mask.sum())
-    df, y = df.loc[~dup_mask], y.loc[~dup_mask]
-    logger.info(f"Exact duplicate rows removed: {int(dup_mask.sum())}")
+    exact_dup_count = int(dup_mask.sum())
+    report["exact_duplicates_found"] = exact_dup_count
+    if getattr(cfg, "DROP_EXACT_DUPLICATES", False):
+        df, y = df.loc[~dup_mask], y.loc[~dup_mask]
+        report["exact_duplicates_removed"] = exact_dup_count
+        logger.info(f"Exact duplicate rows removed: {exact_dup_count}")
+    else:
+        report["exact_duplicates_removed"] = 0
+        logger.info(f"Exact duplicate rows preserved ({exact_dup_count} duplicates) - using original dataset")
 
     # 3. Irrelevant / identifier columns --------------------------------------
     user_excluded = cfg.EXCLUDE_COLUMNS.get(fmt, [])
@@ -254,6 +260,8 @@ def stabilize(df, fmt, out_dir, logger):
         tokens = set(re.split(r"[^a-z0-9]+", str(col).lower()))
         if str(col).lower().startswith("unnamed:"):
             drop_columns([col], "pandas index column ('Unnamed')")
+        elif str(col).lower().strip() in ("file_path", "filepath", "file_name", "filename"):
+            drop_columns([col], "file path/name identifier column")
         elif tokens & cfg.ID_NAME_TOKENS:
             is_numeric = pd.api.types.is_numeric_dtype(df[col])
             if (not is_numeric) or df[col].nunique() > 0.99 * len(df):
@@ -281,8 +289,15 @@ def stabilize(df, fmt, out_dir, logger):
     # 5. Feature-level duplicates and conflicting labels ---------------------
     hashes = pd.util.hash_pandas_object(df, index=False)
     feature_dups = pd.DataFrame({"h": hashes, "y": y}).duplicated(keep="first")
-    report["feature_duplicates_removed"] = int(feature_dups.sum())
-    df, y = df.loc[~feature_dups], y.loc[~feature_dups]
+    feat_dup_count = int(feature_dups.sum())
+    report["feature_duplicates_found"] = feat_dup_count
+    if getattr(cfg, "DROP_FEATURE_DUPLICATES", False):
+        df, y = df.loc[~feature_dups], y.loc[~feature_dups]
+        report["feature_duplicates_removed"] = feat_dup_count
+        logger.info(f"Duplicate feature rows removed: {feat_dup_count}")
+    else:
+        report["feature_duplicates_removed"] = 0
+        logger.info(f"Duplicate feature rows preserved ({feat_dup_count} duplicates) - using original dataset")
     hashes = hashes.loc[df.index]
     label_count = pd.DataFrame({"h": hashes, "y": y}).groupby("h")["y"].transform("nunique")
     conflicts = label_count > 1
@@ -291,25 +306,57 @@ def stabilize(df, fmt, out_dir, logger):
         logger.warning(f"{int(conflicts.sum())} rows share identical features but have different labels.")
         if cfg.DROP_CONFLICTING_LABEL_ROWS:
             df, y = df.loc[~conflicts], y.loc[~conflicts]
-    logger.info(f"Duplicate feature rows removed: {int(feature_dups.sum())}")
 
     # 6. Missing values -------------------------------------------------------
+    missing_strategy = getattr(cfg, "MISSING_STRATEGY", "median").lower()
     missing = df.isna().sum()
     pct = missing / max(len(df), 1)
     rows = []
-    for col in df.columns:
-        if pct[col] > cfg.MAX_MISSING_COLUMN_FRACTION:
-            action = f"dropped (>{int(cfg.MAX_MISSING_COLUMN_FRACTION * 100)}% missing)"
-        elif missing[col] == 0:
-            action = "none needed"
-        elif kinds[col] == "categorical":
-            action = "most-frequent/'__missing__' category (fitted on train only)"
-        else:
-            action = "median imputation (fitted on train only)"
-        rows.append({"column": col, "kind": kinds[col], "missing_count": int(missing[col]),
-                     "missing_pct": round(100 * pct[col], 3), "action": action})
+    cols_to_drop = []
+
+    if missing_strategy == "remove":
+        # Remove columns exceeding threshold OR rows with missing values
+        drop_cols_high_missing = getattr(cfg, "DROP_COLUMNS_WITH_HIGH_MISSING", True)
+        if drop_cols_high_missing:
+            cols_to_drop = [c for c in df.columns if pct[c] > cfg.MAX_MISSING_COLUMN_FRACTION]
+        for col in df.columns:
+            if col in cols_to_drop:
+                action = f"dropped (>{int(cfg.MAX_MISSING_COLUMN_FRACTION * 100)}% missing)"
+            elif missing[col] == 0:
+                action = "none needed"
+            else:
+                action = "rows removed"
+            rows.append({"column": col, "kind": kinds[col], "missing_count": int(missing[col]),
+                         "missing_pct": round(100 * pct[col], 3), "action": action})
+        if cols_to_drop:
+            drop_columns(cols_to_drop, "too many missing values")
+        # Remove rows containing missing values
+        if df.isna().any().any():
+            not_na_mask = df.notna().all(axis=1)
+            rows_removed = int((~not_na_mask).sum())
+            df, y = df.loc[not_na_mask], y.loc[not_na_mask]
+            logger.info(f"Missing values handled by removal: dropped {rows_removed} rows with NaN")
+    else:
+        # Default: median imputation (performed on training set in preprocessing)
+        drop_cols_high_missing = getattr(cfg, "DROP_COLUMNS_WITH_HIGH_MISSING", False)
+        if drop_cols_high_missing:
+            cols_to_drop = [c for c in df.columns if pct[c] > cfg.MAX_MISSING_COLUMN_FRACTION]
+        for col in df.columns:
+            if col in cols_to_drop:
+                action = f"dropped (>{int(cfg.MAX_MISSING_COLUMN_FRACTION * 100)}% missing)"
+            elif missing[col] == 0:
+                action = "none needed"
+            elif kinds[col] == "categorical":
+                action = "most-frequent/'__missing__' category (fitted on train only)"
+            else:
+                action = "median imputation (fitted on train only)"
+            rows.append({"column": col, "kind": kinds[col], "missing_count": int(missing[col]),
+                         "missing_pct": round(100 * pct[col], 3), "action": action})
+        if cols_to_drop:
+            drop_columns(cols_to_drop, "too many missing values")
+        logger.info(f"Missing values handled by median imputation (fitted on training set)")
+
     missing_table = pd.DataFrame(rows)
-    drop_columns([c for c in df.columns if pct[c] > cfg.MAX_MISSING_COLUMN_FRACTION], "too many missing values")
     report["total_missing_cells"] = int(missing.sum())
     report["columns_with_missing"] = int((missing > 0).sum())
     logger.info(f"Missing cells: {int(missing.sum())} in {int((missing > 0).sum())} columns")
@@ -319,23 +366,7 @@ def stabilize(df, fmt, out_dir, logger):
     drop_columns(constant, "constant column (single value)")
     logger.info(f"Constant columns removed: {constant}")
 
-    # 8. Leakage ---------------------------------------------------------------
-    kinds = {c: kinds[c] for c in df.columns}
-    remove_threshold = getattr(cfg, "LEAKAGE_AUC_REMOVE_OVERRIDE", {}).get(fmt, cfg.LEAKAGE_AUC_REMOVE)
-    if remove_threshold != cfg.LEAKAGE_AUC_REMOVE:
-        logger.info(f"Leakage remove threshold overridden for '{fmt}': {remove_threshold} "
-                    f"(global={cfg.LEAKAGE_AUC_REMOVE})")
-    findings = detect_statistical_leakage(df, y, kinds, remove_threshold=remove_threshold)
-    report["leakage_findings"] = findings
-    for item in findings:
-        level = logger.warning
-        level(f"Possible leakage: {item['column']} ({item['check']} = {item['value']})"
-              f"{' -> REMOVED' if item['remove'] and cfg.REMOVE_STATISTICAL_LEAKAGE else ''}")
-    if cfg.REMOVE_STATISTICAL_LEAKAGE:
-        drop_columns([f["column"] for f in findings if f["remove"]], "leakage: feature alone separates the classes")
-
-
-    # 9. Statistics & outliers (reported only) --------------------------------
+    # 8. Statistics & outliers (reported only) --------------------------------
     stats = numeric_statistics(df)
     outliers = outlier_report(df)
     report["columns_with_outliers"] = int(len(outliers))

@@ -1,0 +1,11 @@
+feature,importance
+non_empty_cells,0.5945819
+entropy_of_text,0.23808043
+string_cell_count,0.09833278
+macro_max_line_length,0.03283193
+remote_template_present,0.018467698
+macro_count_parentheses,0.007388854
+macro_max_arithmetic_ops,0.0063499603
+numeric_cell_count,0.002780021
+max_rows,0.0007796567
+macro_line_count,0.00040693715

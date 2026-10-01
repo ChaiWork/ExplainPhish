@@ -1,0 +1,85 @@
+{
+  "format": "html",
+  "rows_before_cleaning": 19997,
+  "columns_before_cleaning": 42,
+  "label_column": "label",
+  "label_check": {
+    "raw_label_values": {
+      "1": 9999,
+      "0": 9998
+    },
+    "unexpected_labels": {},
+    "rows_with_unexpected_labels": 0
+  },
+  "exact_duplicates_found": 0,
+  "exact_duplicates_removed": 0,
+  "id_like_columns_to_review": [],
+  "dtype_counts": {
+    "numeric": 40
+  },
+  "feature_duplicates_found": 4581,
+  "feature_duplicates_removed": 4581,
+  "conflicting_label_rows": 12,
+  "total_missing_cells": 0,
+  "columns_with_missing": 0,
+  "leakage_findings": [],
+  "columns_with_outliers": 32,
+  "rows_after_cleaning": 15404,
+  "columns_after_cleaning": 40,
+  "removed_columns": [
+    {
+      "column": "label",
+      "reason": "target column"
+    },
+    {
+      "column": "__source_file__",
+      "reason": "source file name (would leak the label if files are split by class)"
+    },
+    {
+      "column": "file_path",
+      "reason": "file path/name identifier column"
+    }
+  ],
+  "feature_columns": [
+    "file_size",
+    "line_count",
+    "entropy",
+    "script_entropy",
+    "tag_count",
+    "unique_tag_count",
+    "script_count",
+    "form_count",
+    "iframe_count",
+    "hidden_iframe_count",
+    "external_links_count",
+    "mailto_link_count",
+    "base64_string_count",
+    "html_comment_count",
+    "max_tag_nesting_depth",
+    "eval_in_script_blocks",
+    "function_count",
+    "total_script_characters",
+    "suspicious_word_count",
+    "keywords_to_words_ratio",
+    "whitespace_ratio",
+    "escaped_char_count",
+    "hex_encoding_rate",
+    "noscript_count",
+    "embedded_js_count",
+    "external_js_count",
+    "internal_link_count",
+    "external_link_count",
+    "img_count",
+    "html_whitespace_ratio",
+    "redirect_mechanism_count",
+    "event_attachment_count",
+    "object_tag_count",
+    "url_digit_count",
+    "url_punct_char_count",
+    "url_avg_length",
+    "url_avg_subdomain_count",
+    "hostname_digit_ratio_avg",
+    "min_link_length",
+    "max_link_length"
+  ]
+}

@@ -1,0 +1,11 @@
+actual,predicted,probability_malicious,feature,feature_value,shap_value
+1,1,1.0,entropy_of_text,5.33630964199247,0.23364106868093443
+1,1,1.0,macro_max_line_length,3098.0,0.2332214295705693
+1,1,1.0,numeric_cell_count,0.0,0.0331375017484963
+1,1,1.0,non_empty_cells,12.0,0.0
+1,1,1.0,string_cell_count,12.0,0.0
+1,1,1.0,macro_line_count,12.0,0.0
+1,1,1.0,max_rows,106.0,0.0
+1,1,1.0,remote_template_present,0.0,0.0
+1,1,1.0,macro_count_parentheses,8.0,0.0
+1,1,1.0,macro_max_arithmetic_ops,2.0,0.0

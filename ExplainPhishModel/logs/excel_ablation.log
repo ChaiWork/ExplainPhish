@@ -1,0 +1,31 @@
+09:40:51 | INFO | ======================================================================
+09:40:51 | INFO | Running Ablation Experiments for Excel
+09:40:51 | INFO | ======================================================================
+09:40:51 | INFO | Loaded Excel_All_Features.csv: 20000 rows x 50 columns
+09:40:51 | INFO | Label column detected: 'label'
+09:40:52 | INFO | Label distribution after normalisation: {0: 10000, 1: 10000} (0=Benign, 1=Malicious)
+09:40:52 | INFO | Exact duplicate rows preserved (0 duplicates) - using original dataset
+09:40:52 | INFO | Duplicate feature rows removed: 6028
+09:40:52 | INFO | Missing values handled by median imputation (fitted on training set)
+09:40:52 | INFO | Missing cells: 0 in 0 columns
+09:40:52 | INFO | Constant columns removed: ['ocr_extracted_text_length', 'preview_image_text_entropy', 'deceptive_keywords_count_ocr', 'macro_callbyname_count', 'preview_image_width', 'preview_image_height']
+09:40:52 | INFO | Columns containing IQR outliers (kept, see suspicious_outliers.csv): 20
+09:40:52 | INFO | Stabilization finished: 20000 -> 13972 rows, 50 -> 42 feature columns
+09:40:52 | INFO | Original class distribution: Benign=10000 (71.57%), Malicious=3972 (28.43%)
+09:40:52 | INFO | Not balanced -> undersampled majority class to 3972 rows.
+09:40:52 | INFO | Final class distribution: Benign=3972, Malicious=3972
+09:40:52 | INFO | ============================================================
+09:40:52 | INFO | [EXCEL] Running Shortcut & Leakage Audit on TRAIN only (4766 rows)
+09:40:52 | INFO | ============================================================
+09:40:53 | WARNING |   [SHORTCUT WARNING] EXCEL data exhibits likely shortcut learning! Any stump CV F1 >= 0.99: False | Top feature 'macro_chr_count' holds 90.7% of tree importance.
+09:40:53 | INFO |   Shortcut audit saved to D:\codingProject\ExplainPhish\ExplainPhishModel\results\excel\shortcut_audit.json and .csv
+09:40:53 | INFO | Total cleaned features available: 42
+09:40:53 | INFO | Matched macro/OLE/DDE features (0): []
+09:40:53 | INFO | Matched format proxy features (1): ['file_size']
+09:40:53 | INFO | Audit-flagged high-risk features (4): ['macro_chr_count', 'macro_arithmetic_operator_count', 'macro_token_count', 'macro_vocab_size']
+09:40:53 | INFO | Variant b skipped: no macro/OLE features found or < 3 features remaining.
+09:40:53 | INFO | --- Evaluating Variant: a_baseline (42 features) ---
+09:40:59 | INFO | --- Evaluating Variant: c_without_format_proxies (41 features) ---
+09:41:04 | INFO | --- Evaluating Variant: d_without_macro_and_proxies (41 features) ---
+09:41:09 | INFO | --- Evaluating Variant: e_without_audit_flagged (38 features) ---
+09:41:14 | INFO | Saved ablation results to: D:\codingProject\ExplainPhish\ExplainPhishModel\results\excel\ablation.csv

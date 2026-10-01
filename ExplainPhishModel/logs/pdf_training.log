@@ -1,34 +1,62 @@
-20:55:46 | INFO | ======================================================================
-20:55:46 | INFO | ExplainPhish pipeline - format: PDF
-20:55:46 | INFO | ======================================================================
-20:55:46 | INFO | Loaded PDF_Top10_features.csv: 19296 rows x 20 columns
-20:55:46 | INFO | Label column detected: 'label'
-20:55:46 | INFO | Label distribution after normalisation: {0: 9297, 1: 9999} (0=Benign, 1=Malicious)
-20:55:46 | INFO | Exact duplicate rows removed: 3950
-20:55:46 | INFO | Duplicate feature rows removed: 0
-20:55:46 | INFO | Missing cells: 0 in 0 columns
-20:55:46 | INFO | Constant columns removed: []
-20:55:46 | INFO | Columns containing IQR outliers (kept, see suspicious_outliers.csv): 8
-20:55:46 | INFO | Stabilization finished: 19296 -> 15346 rows, 20 -> 10 feature columns
-20:55:46 | INFO | Original class distribution: Benign=9283 (60.49%), Malicious=6063 (39.51%)
-20:55:46 | INFO | Not balanced -> undersampled majority class to 6063 rows.
-20:55:46 | INFO | Final class distribution: Benign=6063, Malicious=6063
-20:55:46 | INFO | Split: train=7275, test=4851 (test set is untouched until final evaluation)
-20:55:46 | INFO | Feature selection mode B: ranking 10 features on TRAINING data, keeping top 10.
-20:55:47 | INFO | Selected features: ['text_length', 'object_count', 'file_size', 'metadata_size', 'title_chars', 'total_filters', 'entropy_of_streams', 'stream_count', 'endstream_count', 'valid_pdf_header']
-20:55:47 | INFO | --- XGBoost ---
-20:55:56 | INFO |   best params for xgb: {'learning_rate': 0.1, 'max_depth': 3, 'n_estimators': 400}
-20:55:58 | INFO |   5-fold CV F1 = 0.9944 +/- 0.0021
-20:55:58 | INFO |   TEST: acc=0.9940 recall=0.9942 FPR=0.0062 AUC=0.9996
-20:56:01 | INFO |   SHAP outputs saved for xgb
-20:56:01 | INFO | --- Random Forest ---
-20:56:24 | INFO |   best params for rf: {'max_depth': None, 'n_estimators': 100}
-20:56:25 | INFO |   5-fold CV F1 = 0.9928 +/- 0.0019
-20:56:25 | INFO |   TEST: acc=0.9926 recall=0.9930 FPR=0.0078 AUC=0.9986
-20:56:29 | INFO |   SHAP outputs saved for rf
-20:56:29 | INFO | --- Decision Tree ---
-20:56:30 | INFO |   best params for dt: {'max_depth': 12, 'min_samples_leaf': 5}
-20:56:31 | INFO |   5-fold CV F1 = 0.985 +/- 0.0025
-20:56:31 | INFO |   TEST: acc=0.9874 recall=0.9930 FPR=0.0181 AUC=0.9943
-20:56:33 | INFO |   SHAP outputs saved for dt
-20:56:33 | INFO | Finished PDF in 47.342s. Results: D:\codingProject\ExplainPhish\ExplainPhishModel\results\pdf
+09:46:46 | INFO | ======================================================================
+09:46:46 | INFO | ExplainPhish pipeline - format: PDF
+09:46:46 | INFO | ======================================================================
+09:46:46 | INFO | Loaded PDF_All_features.csv: 19296 rows x 42 columns
+09:46:46 | INFO | Label column detected: 'label'
+09:46:46 | INFO | Label distribution after normalisation: {0: 9297, 1: 9999} (0=Benign, 1=Malicious)
+09:46:46 | INFO | Exact duplicate rows preserved (0 duplicates) - using original dataset
+09:46:46 | WARNING | Columns with ID-like names kept (numeric, not unique) - please review: ['name_obfuscations']
+09:46:46 | INFO | Duplicate feature rows removed: 3943
+09:46:46 | INFO | Missing values handled by median imputation (fitted on training set)
+09:46:46 | INFO | Missing cells: 0 in 0 columns
+09:46:46 | INFO | Constant columns removed: ['embedded_file_count', 'average_embedded_file_size', 'xref_count', 'xref_entries', 'submitform_count', 'jbig2decode_count', 'trailer_count', 'startxref_count']
+09:46:46 | INFO | Columns containing IQR outliers (kept, see suspicious_outliers.csv): 13
+09:46:46 | INFO | Stabilization finished: 19296 -> 15353 rows, 42 -> 32 feature columns
+09:46:46 | INFO | Original class distribution: Benign=9283 (60.46%), Malicious=6070 (39.54%)
+09:46:46 | INFO | Not balanced -> undersampled majority class to 6070 rows.
+09:46:46 | INFO | Final class distribution: Benign=6070, Malicious=6070
+09:46:46 | INFO | Split: train=7284, test=4856 (test set is untouched until final evaluation)
+09:46:46 | INFO | ============================================================
+09:46:46 | INFO | [PDF] Running Shortcut & Leakage Audit on TRAIN only (7284 rows)
+09:46:46 | INFO | ============================================================
+09:46:48 | INFO |   Shortcut audit saved to D:\codingProject\ExplainPhish\ExplainPhishModel\results\pdf\shortcut_audit.json and .csv
+09:46:48 | INFO | Feature selection mode B: ranking 32 features on TRAINING data, keeping top 10.
+09:46:49 | INFO | Selected features: ['text_length', 'xfa_count', 'object_count', 'file_size', 'metadata_size', 'title_chars', 'total_filters', 'has_multiple_behavioral_keywords_in_one_object', 'javascript_count', 'font_object_count']
+09:46:49 | INFO | --- MODEL PARAMETERS ---
+09:46:49 | INFO | 
+09:46:49 | INFO | XGBoost:
+09:46:49 | INFO | n_estimators=300
+09:46:49 | INFO | max_depth=5
+09:46:49 | INFO | learning_rate=0.06
+09:46:49 | INFO | subsample=0.85
+09:46:49 | INFO | colsample_bytree=0.8
+09:46:49 | INFO | min_child_weight=3
+09:46:49 | INFO | reg_alpha=0.1
+09:46:49 | INFO | reg_lambda=1.5
+09:46:49 | INFO | 
+09:46:49 | INFO | Random Forest:
+09:46:49 | INFO | n_estimators=300
+09:46:49 | INFO | max_depth=12
+09:46:49 | INFO | min_samples_leaf=2
+09:46:49 | INFO | min_samples_split=10
+09:46:49 | INFO | max_features=sqrt
+09:46:49 | INFO | 
+09:46:49 | INFO | Decision Tree:
+09:46:49 | INFO | max_depth=7
+09:46:49 | INFO | min_samples_leaf=10
+09:46:49 | INFO | min_samples_split=20
+09:46:49 | INFO | 
+09:46:49 | INFO | --- XGBoost ---
+09:46:50 | INFO |   5-fold CV F1 = 0.9959 +/- 0.0023
+09:46:50 | INFO |   TEST: acc=0.9969 recall=0.9955 FPR=0.0016 AUC=1.0000
+09:46:53 | INFO |   SHAP outputs saved for xgb
+09:46:53 | INFO | --- Random Forest ---
+09:46:57 | INFO |   5-fold CV F1 = 0.996 +/- 0.0017
+09:46:58 | INFO |   TEST: acc=0.9967 recall=0.9959 FPR=0.0025 AUC=0.9999
+09:47:02 | INFO |   SHAP outputs saved for rf
+09:47:02 | INFO | --- Decision Tree ---
+09:47:02 | INFO |   5-fold CV F1 = 0.9933 +/- 0.0032
+09:47:02 | INFO |   TEST: acc=0.9953 recall=0.9951 FPR=0.0045 AUC=0.9960
+09:47:04 | INFO |   SHAP outputs saved for dt
+09:47:04 | INFO | Ensemble Diversity: mean disagreement = 0.33%, all models wrong = 8
+09:47:05 | INFO | Finished PDF in 18.708s. Results: D:\codingProject\ExplainPhish\ExplainPhishModel\results\pdf

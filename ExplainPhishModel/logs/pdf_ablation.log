@@ -1,0 +1,31 @@
+09:40:01 | INFO | ======================================================================
+09:40:01 | INFO | Running Ablation Experiments for PDF
+09:40:01 | INFO | ======================================================================
+09:40:01 | INFO | Loaded PDF_All_features.csv: 19296 rows x 42 columns
+09:40:01 | INFO | Label column detected: 'label'
+09:40:01 | INFO | Label distribution after normalisation: {0: 9297, 1: 9999} (0=Benign, 1=Malicious)
+09:40:01 | INFO | Exact duplicate rows preserved (0 duplicates) - using original dataset
+09:40:01 | WARNING | Columns with ID-like names kept (numeric, not unique) - please review: ['name_obfuscations']
+09:40:01 | INFO | Duplicate feature rows removed: 3943
+09:40:01 | INFO | Missing values handled by median imputation (fitted on training set)
+09:40:01 | INFO | Missing cells: 0 in 0 columns
+09:40:01 | INFO | Constant columns removed: ['embedded_file_count', 'average_embedded_file_size', 'xref_count', 'xref_entries', 'submitform_count', 'jbig2decode_count', 'trailer_count', 'startxref_count']
+09:40:02 | INFO | Columns containing IQR outliers (kept, see suspicious_outliers.csv): 13
+09:40:02 | INFO | Stabilization finished: 19296 -> 15353 rows, 42 -> 32 feature columns
+09:40:02 | INFO | Original class distribution: Benign=9283 (60.46%), Malicious=6070 (39.54%)
+09:40:02 | INFO | Not balanced -> undersampled majority class to 6070 rows.
+09:40:02 | INFO | Final class distribution: Benign=6070, Malicious=6070
+09:40:02 | INFO | ============================================================
+09:40:02 | INFO | [PDF] Running Shortcut & Leakage Audit on TRAIN only (7284 rows)
+09:40:02 | INFO | ============================================================
+09:40:03 | INFO |   Shortcut audit saved to D:\codingProject\ExplainPhish\ExplainPhishModel\results\pdf\shortcut_audit.json and .csv
+09:40:03 | INFO | Total cleaned features available: 32
+09:40:03 | INFO | Matched macro/OLE/DDE features (0): []
+09:40:03 | INFO | Matched format proxy features (1): ['file_size']
+09:40:03 | INFO | Audit-flagged high-risk features (0): []
+09:40:03 | INFO | Variant b skipped: no macro/OLE features found or < 3 features remaining.
+09:40:03 | INFO | Variant e skipped: < 3 features remain (32 left) or no features flagged by audit.
+09:40:03 | INFO | --- Evaluating Variant: a_baseline (32 features) ---
+09:40:10 | INFO | --- Evaluating Variant: c_without_format_proxies (31 features) ---
+09:40:16 | INFO | --- Evaluating Variant: d_without_macro_and_proxies (31 features) ---
+09:40:22 | INFO | Saved ablation results to: D:\codingProject\ExplainPhish\ExplainPhishModel\results\pdf\ablation.csv

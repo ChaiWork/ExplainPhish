@@ -1,0 +1,21 @@
+{
+  "mode": "own (train-only importance + SHAP)",
+  "n_features": 10,
+  "score_columns": [
+    "xgb_importance",
+    "rf_importance",
+    "xgb_mean_abs_shap"
+  ],
+  "selected_features": [
+    "struct_pos",
+    "path_a-accent3",
+    "struct_typeface",
+    "struct_script",
+    "path_w-r",
+    "path_a-hlink",
+    "path_/w-p",
+    "path_/w-r",
+    "path_w-p",
+    "struct_{http://schemas.openxmlformats.org/wordprocessingml/2006/main}themeFill"
+  ]
+}

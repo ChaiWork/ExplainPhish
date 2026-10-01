@@ -1,0 +1,13 @@
+column,reason
+label,target column
+__source_file__,source file name (would leak the label if files are split by class)
+ole_object_count,leakage: feature alone separates the classes
+ole_object_type_count,leakage: feature alone separates the classes
+macro_present,leakage: feature alone separates the classes
+dde_present,leakage: feature alone separates the classes
+vba_keywords_count,leakage: feature alone separates the classes
+entropy,leakage: feature alone separates the classes
+struct_ContentType,leakage: feature alone separates the classes
+struct_PartName,leakage: feature alone separates the classes
+file_size,leakage: feature alone separates the classes
+struct_val,leakage: feature alone separates the classes

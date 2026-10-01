@@ -1,0 +1,107 @@
+{
+  "format": "pdf",
+  "n_train_samples": 7284,
+  "n_features_evaluated": 32,
+  "likely_shortcut": false,
+  "shortcut_criteria": {
+    "any_depth1_stump_cv_f1_ge_0_99": false,
+    "top_feature_importance_ge_0_90": false
+  },
+  "decision_tree_diagnostics": {
+    "fitted_depth": 13,
+    "fitted_leaves": 44,
+    "top_feature": "text_length",
+    "top_feature_importance_share": 0.67964
+  },
+  "high_auc_features_found": [],
+  "high_auc_features_removed": [],
+  "n_features_surviving": 32,
+  "missingness_audit": {
+    "columns_with_missing": []
+  },
+  "near_perfect_correlations_count": 4,
+  "near_perfect_correlations": [
+    {
+      "feature_1": "stream_count",
+      "feature_2": "endstream_count",
+      "correlation": 1.0
+    },
+    {
+      "feature_1": "js_count",
+      "feature_2": "javascript_count",
+      "correlation": 0.99233
+    },
+    {
+      "feature_1": "js_count",
+      "feature_2": "has_multiple_behavioral_keywords_in_one_object",
+      "correlation": 0.98445
+    },
+    {
+      "feature_1": "javascript_count",
+      "feature_2": "has_multiple_behavioral_keywords_in_one_object",
+      "correlation": 0.98305
+    }
+  ],
+  "top_10_features_by_auc": [
+    {
+      "feature": "file_size",
+      "single_feature_auc": 0.91004,
+      "stump_cv_f1_mean": 0.88729,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "title_chars",
+      "single_feature_auc": 0.84035,
+      "stump_cv_f1_mean": 0.86308,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "encrypted",
+      "single_feature_auc": 0.50329,
+      "stump_cv_f1_mean": 0.66783,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "metadata_size",
+      "single_feature_auc": 0.9296,
+      "stump_cv_f1_mean": 0.86936,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "page_count",
+      "single_feature_auc": 0.90696,
+      "stump_cv_f1_mean": 0.76581,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "valid_pdf_header",
+      "single_feature_auc": 0.81219,
+      "stump_cv_f1_mean": 0.76915,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "image_count",
+      "single_feature_auc": 0.68896,
+      "stump_cv_f1_mean": 0.75877,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "text_length",
+      "single_feature_auc": 0.91764,
+      "stump_cv_f1_mean": 0.89651,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "object_count",
+      "single_feature_auc": 0.94302,
+      "stump_cv_f1_mean": 0.90954,
+      "high_auc_flag": false
+    },
+    {
+      "feature": "font_object_count",
+      "single_feature_auc": 0.85996,
+      "stump_cv_f1_mean": 0.85602,
+      "high_auc_flag": false
+    }
+  ]
+}
