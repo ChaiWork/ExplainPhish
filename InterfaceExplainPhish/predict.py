@@ -1,12 +1,21 @@
 """
-ExplainPhish Prediction & Voting CLI
+ExplainPhish Prediction & Multimodal Voting CLI
+==============================================
+Runs the trained models (Random Forest, Decision Tree, Logistic Regression),
+applies StandardScaler transformation on extracted features, computes
+majority voting consensus, and presents explainability drivers for any input file.
 
-Runs the trained models (Decision Tree, Random Forest, XGBoost), computes
-majority voting consensus, and extracts SHAP explanation drivers for any input file.
+Supported Formats:
+    - HTML  (.html, .htm)
+    - PDF   (.pdf)
+    - Excel (.xlsx, .xlsm, .xls)
+    - Word  (.docx, .docm, .doc)
 
 Usage:
     python predict.py --file sample.pdf
+    python predict.py --file sample.html
     python predict.py --file sample.xlsx
+    python predict.py --file sample.docx
     python predict.py --dir path/to/folder/
     python predict.py --file sample.pdf --json
 """
@@ -17,37 +26,30 @@ import json
 import sys
 from pathlib import Path
 
-# Add ExplainPhish to sys.path so we can import its core pipeline
+# Add current directory to path
 _HERE = Path(__file__).resolve().parent
-_EXPLAINPHISH_ROOT = _HERE.parent / "ExplainPhishModel" if (_HERE.parent / "ExplainPhishModel").exists() else _HERE.parent / "ExplainPhish"
-if str(_EXPLAINPHISH_ROOT) not in sys.path:
-    sys.path.insert(0, str(_EXPLAINPHISH_ROOT))
-
-# Also ensure InterfaceExplainPhish extractors take precedence
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-try:
-    from src.inference import run_inference
-except ImportError as e:
-    print(f"Error: Unable to import ExplainPhish inference core from {_EXPLAINPHISH_ROOT}: {e}")
-    sys.exit(1)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
+from inference import run_inference, InferenceResult
 
 
-def format_report(res: dict) -> str:
+def format_report(res: InferenceResult) -> str:
     lines = []
-    lines.append("=" * 64)
-    lines.append(f" ExplainPhish Detection Report: {res.get('file_name', 'Unknown')}")
-    lines.append("=" * 64)
+    lines.append("=" * 68)
+    lines.append(f"  ExplainPhish Detection Report: {res.get('file_name', 'Unknown')}")
+    lines.append("=" * 68)
 
     if res.get("error"):
         lines.append(f"  [ERROR] {res['error']}")
-        lines.append("=" * 64)
+        lines.append("=" * 68)
         return "\n".join(lines)
 
-    lines.append(f"  Format:        {res.get('format_display', res.get('format', 'N/A'))} ({res.get('format')})")
+    lines.append(f"  Format:          {res.get('format_display', res.get('format', 'N/A'))} ({res.get('format')})")
+    lines.append(f"  Standardization: Applied via StandardScaler fitted on training benchmark")
     
     # Voting Verdict Box
     vote = res.get("vote", {})
@@ -63,68 +65,70 @@ def format_report(res: dict) -> str:
     lines.append(f"  Confidence Score  : {conf:.1f}% ({band} confidence)")
     lines.append(f"  Voting Consensus  : {counts.get('malicious', 0)} Malicious vs {counts.get('benign', 0)} Benign")
     if uncertain:
-        lines.append("  Uncertainty Flag  : Models disagree (split decision)")
+        lines.append("  Agreement Status  : Split decision (majority vote applied)")
     else:
-        lines.append("  Uncertainty Flag  : Unanimous consensus across all models")
+        lines.append("  Agreement Status  : Unanimous consensus across all 3 models")
 
     # Individual Model Predictions
     lines.append("")
-    lines.append("  Individual Model Predictions:")
-    lines.append("  " + "-" * 58)
-    lines.append(f"    {'Model':<18} {'Prediction':<15} {'Malicious Prob'}")
-    lines.append("  " + "-" * 58)
+    lines.append("  Individual Model Predictions (on Standardized Features):")
+    lines.append("  " + "-" * 62)
+    lines.append(f"    {'Model':<22} {'Prediction':<15} {'Malicious Prob'}")
+    lines.append("  " + "-" * 62)
     for p in res.get("model_predictions", []):
-        m_name = p.get("model", "unknown").replace("_", " ").title()
+        m_name = p.get("model", "unknown")
         m_pred = "MALICIOUS" if p.get("prediction") == 1 else "BENIGN"
         m_prob = p.get("probability_malicious", 0.0) * 100
-        lines.append(f"    {m_name:<18} {m_pred:<15} {m_prob:5.1f}%")
-    lines.append("  " + "-" * 58)
+        lines.append(f"    {m_name:<22} {m_pred:<15} {m_prob:5.1f}%")
+    lines.append("  " + "-" * 62)
 
-    # Top SHAP Explainability Drivers
-    shap_list = res.get("shap_top_features", [])
-    if shap_list:
+    # Top Risk Drivers
+    drivers = res.get("top_risk_drivers", [])
+    if drivers:
         lines.append("")
-        lines.append("  Key Decision Drivers (SHAP Explanations):")
-        lines.append("  " + "-" * 58)
-        lines.append(f"    {'Feature Name':<28} {'Impact':<10} {'Direction'}")
-        lines.append("  " + "-" * 58)
-        for s in shap_list:
-            feat = s.get("feature", "")
-            val = s.get("shap_value", 0.0)
-            d = s.get("direction", "")
-            arrow = "[+]" if "+" in d or "↑" in d else "[-]"
-            desc = "Increases Risk" if "+" in d or "↑" in d else "Reduces Risk"
-            lines.append(f"    {feat:<28} {val:+8.4f}   {arrow} ({desc})")
-        lines.append("  " + "-" * 58)
+        lines.append("  Top Decision Drivers (Feature Impact & Standardized Z-Score):")
+        lines.append("  " + "-" * 62)
+        lines.append(f"    {'Feature Name':<28} {'Z-Score':<10} {'Impact'}")
+        lines.append("  " + "-" * 62)
+        for d in drivers:
+            feat = d.get("feature", "")
+            z = d.get("std_value", 0.0)
+            imp = d.get("impact", 0.0)
+            desc = "[+] Increases Risk" if imp > 0 else "[-] Reduces Risk"
+            lines.append(f"    {feat:<28} {z:+7.2f}    {imp:+7.3f} ({desc})")
+        lines.append("  " + "-" * 62)
 
     # Extracted Features
     features = res.get("features", {})
     if features:
         lines.append("")
-        lines.append(f"  Extracted Features ({len(features)} total):")
+        lines.append(f"  Extracted Raw Features ({len(features)} total):")
         for k, v in features.items():
             if isinstance(v, float):
-                lines.append(f"    - {k:<28}: {v:.4f}")
+                lines.append(f"    - {k:<30}: {v:.4f}")
             else:
-                lines.append(f"    - {k:<28}: {v}")
+                lines.append(f"    - {k:<30}: {v}")
 
-    lines.append("=" * 64)
+    lines.append("=" * 68)
     return "\n".join(lines)
 
 
 def process_file(file_path: Path, fmt: str | None = None, as_json: bool = False) -> None:
-    res = run_inference(file_path, fmt=fmt)
-    res["file_name"] = file_path.name
-    res["file_path"] = str(file_path)
-
-    if as_json:
-        print(json.dumps(res, indent=2))
-    else:
-        print(format_report(res))
+    try:
+        res = run_inference(file_path, fmt=fmt)
+        if as_json:
+            print(json.dumps(res, indent=2))
+        else:
+            print(format_report(res))
+    except Exception as e:
+        if as_json:
+            print(json.dumps({"file_name": file_path.name, "error": str(e)}, indent=2))
+        else:
+            print(f"Error processing {file_path.name}: {e}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ExplainPhish Model Prediction & Voting CLI")
+    parser = argparse.ArgumentParser(description="ExplainPhish Standardized Prediction & Voting CLI")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--file", "-f", nargs="+", help="Path to single file to analyze")
     group.add_argument("--dir", "-d", nargs="+", help="Directory of files to analyze")
@@ -152,4 +156,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -1,5 +1,0 @@
-column,reason
-label,target column
-__source_file__,source file name (would leak the label if files are split by class)
-file_name,identifier-like column name
-macro_chr_count,leakage: feature alone separates the classes

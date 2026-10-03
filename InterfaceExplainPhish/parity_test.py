@@ -37,9 +37,8 @@ import sys
 from pathlib import Path
 
 # ── locate the model folder ────────────────────────────────────────────────────
-_MODELS_ROOT = (Path(__file__).resolve().parent.parent / "ExplainPhishModel" / "models"
-                if (Path(__file__).resolve().parent.parent / "ExplainPhishModel" / "models").exists()
-                else Path(__file__).resolve().parent.parent / "ExplainPhish" / "models")
+_HERE = Path(__file__).resolve().parent
+_MODELS_ROOT = _HERE / "models" if (_HERE / "models").exists() else _HERE.parent / "models"
 
 FORMAT_EXTENSIONS = {
     "pdf":   {".pdf"},
@@ -54,13 +53,21 @@ CATEGORICAL_FORMATS = {"word"}
 
 def load_required_keys(fmt: str) -> list[str]:
     """Load the expected feature keys from models/<fmt>/selected_features.json."""
-    schema_path = _MODELS_ROOT / fmt / "selected_features.json"
-    if not schema_path.exists():
-        print(f"  [WARN] selected_features.json not found at {schema_path}. "
-              f"Skipping schema check.")
-        return []
-    with open(schema_path, encoding="utf-8") as f:
-        return json.load(f)["selected_features"]
+    candidates = [
+        _HERE / "models" / fmt / "selected_features.json",
+        _MODELS_ROOT / fmt / "selected_features.json",
+        _HERE.parent / "ExplainPhishModel" / "models" / fmt / "selected_features.json",
+    ]
+    for schema_path in candidates:
+        if schema_path.exists():
+            with open(schema_path, encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+                elif isinstance(data, dict) and "selected_features" in data:
+                    return data["selected_features"]
+    print(f"  [WARN] selected_features.json not found for {fmt}. Skipping schema check.")
+    return []
 
 
 def check_values(features: dict, required_keys: list[str], fmt: str) -> list[str]:
