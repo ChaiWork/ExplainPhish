@@ -79,14 +79,62 @@ class InferenceResult(TypedDict):
 
 
 def detect_format(file_path: Path) -> str:
-    """Detect file format based on suffix."""
+    """
+    Detect file format based on suffix and magic byte sniffing.
+    Supports PDF, Word (OOXML & legacy), Excel (OOXML & legacy), and HTML.
+    """
     suffix = file_path.suffix.lower()
     for fmt, exts in FORMAT_EXTENSIONS.items():
         if suffix in exts:
             return fmt
+
+    # Fallback: Magic byte & structure inspection
+    if file_path.is_file():
+        try:
+            with open(file_path, "rb") as f:
+                header = f.read(4096)
+
+            # 1. PDF signature
+            if header.startswith(b"%PDF") or b"%PDF-" in header[:1024]:
+                return "pdf"
+
+            # 2. OOXML ZIP package (Word .docx or Excel .xlsx)
+            if header.startswith(b"PK\x03\x04"):
+                import zipfile
+                try:
+                    with zipfile.ZipFile(file_path, "r") as zf:
+                        names = zf.namelist()
+                        if any(n.startswith("word/") for n in names):
+                            return "word"
+                        if any(n.startswith("xl/") for n in names):
+                            return "excel"
+                except Exception:
+                    pass
+
+            # 3. HTML signatures
+            header_lower = header.lower()
+            html_markers = [b"<!doctype html", b"<html", b"<head", b"<body", b"<script", b"<iframe"]
+            if any(m in header_lower for m in html_markers):
+                return "html"
+
+            # 4. Legacy OLE Compound Document (Excel 97-2003 or Word 97-2003)
+            if header.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
+                try:
+                    import olefile
+                    if olefile.isOleFile(file_path):
+                        with olefile.OleFileIO(file_path) as ole:
+                            if ole.exists("Workbook") or ole.exists("Book"):
+                                return "excel"
+                            if ole.exists("WordDocument"):
+                                return "word"
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
     raise ValueError(
-        f"Unsupported file extension '{suffix}'. Supported formats: "
-        f"HTML (.html, .htm), PDF (.pdf), Excel (.xlsx, .xlsm, .xls), Word (.docx, .docm, .doc)"
+        f"Unsupported file extension '{suffix}' and cannot determine format via magic byte sniffing. "
+        f"Supported formats: HTML (.html, .htm), PDF (.pdf), Excel (.xlsx, .xlsm, .xls), Word (.docx, .docm, .doc)"
     )
 
 

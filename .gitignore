@@ -1,0 +1,25 @@
+# Sample test documents — excluded to prevent accidental secret exposure
+# (HTML samples may contain API keys from real phishing pages)
+InterfaceExplainPhish/Sample/
+Sample/
+**/Sample/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

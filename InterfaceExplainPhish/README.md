@@ -1,4 +1,4 @@
-﻿# ExplainPhish — Interface & Inference Layer
+# ExplainPhish — Interface & Inference Layer
 
 ## Structure
 
@@ -15,29 +15,48 @@ InterfaceExplainPhish/
   parity_test.py         schema validation and extractor sanity checks
 ```
 
+## Overview
+
+ExplainPhish provides static analysis, feature extraction, standard scaling, and multi-model consensus voting across 4 major document formats:
+- **HTML** (`.html`, `.htm`)
+- **PDF** (`.pdf`)
+- **Excel** (`.xlsx`, `.xlsm`, `.xls`, `.xlsb`)
+- **Word** (`.docx`, `.docm`, `.doc`)
+
+### Standardized Inference Pipeline
+1. **Feature Extraction**: Static parsing without dynamic execution (file size limit: 50MB, zip bomb protection).
+2. **StandardScaler Alignment**: Raw feature values are transformed using the fitted scaler from training ($z = \frac{x - \mu}{\sigma}$), preventing scale explosion and ensuring zero training-serving skew.
+3. **Multi-Model Inferences**: Evaluated simultaneously by **Random Forest**, **Decision Tree**, and **Logistic Regression**.
+4. **Consensus Voting**: Hard majority vote ($\ge 2/3$) decides the verdict (`MALICIOUS` vs `BENIGN`), complemented by soft probability averaging, confidence bands (`HIGH`, `MEDIUM`, `LOW`), and directional risk drivers ($w_j \times z_j$).
+
 ## Running Inference & Voting (predict.py)
 
-Analyze single files or directories with trained models (Decision Tree, Random Forest, XGBoost), consensus voting, and SHAP decision explanations:
+Analyze single files or entire directories:
 
 ```powershell
 cd D:\codingProject\ExplainPhish\InterfaceExplainPhish
 
-# Predict single file
-python predict.py --file "..\sample_09994.pdf"
+# Predict single file (automatic format detection & magic byte sniffing)
+python predict.py --file "Sample\pbenign_pdf\i1040nre.pdf"
+python predict.py --file "Sample\pmalicios_pdf\sample_07602.pdf"
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html"
+python predict.py --file "Sample\eBenign_Excel\benign_sample_1244.xlsx"
 
-# Predict directory of files
-python predict.py --dir "..\path\to\samples\"
+# Predict directory of files (recursively discovers test documents)
+python predict.py --dir "Sample"
+python predict.py --dir "Sample\pmalicios_pdf"
 
-# Output structured JSON for web/API integration
-python predict.py --file "..\sample_09994.pdf" --json
+# Output structured JSON for API / web interface integration
+python predict.py --file "Sample\pbenign_pdf\i1040nre.pdf" --json
 ```
 
 ### Output Includes:
-- **Detected Format**: Magic byte sniffing (PDF, Word, Excel, HTML)
+- **Detected Format**: Suffix and magic signature detection
 - **Extracted Features**: Real-time static document parsing
-- **Individual Models**: Predictions and malicious probabilities from Decision Tree, Random Forest, and XGBoost
-- **Consensus Voting**: Majority vote verdict (`MALICIOUS` / `BENIGN`), confidence score, confidence band (`HIGH` / `MEDIUM` / `LOW`), and agreement/uncertainty flag
-- **SHAP Drivers**: Top features explaining why the models voted malicious or benign (risk increase [+] or risk reduction [-])
+- **Standardized Z-Scores**: Calibrated deviations from the training baseline
+- **Individual Models**: Predictions and malicious probabilities from Random Forest, Decision Tree, and Logistic Regression
+- **Consensus Voting**: Majority vote verdict (`MALICIOUS` / `BENIGN`), confidence score, confidence band (`HIGH` / `MEDIUM` / `LOW`), and agreement status
+- **Top Decision Drivers**: Top features driving the prediction with their directionality (`[+] Increases Risk` vs `[-] Reduces Risk`) and standardized impact score
 
 ---
 

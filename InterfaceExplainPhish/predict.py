@@ -117,14 +117,14 @@ def process_file(file_path: Path, fmt: str | None = None, as_json: bool = False)
     try:
         res = run_inference(file_path, fmt=fmt)
         if as_json:
-            print(json.dumps(res, indent=2))
+            print(json.dumps(res, indent=2), flush=True)
         else:
-            print(format_report(res))
+            print(format_report(res), flush=True)
     except Exception as e:
         if as_json:
-            print(json.dumps({"file_name": file_path.name, "error": str(e)}, indent=2))
+            print(json.dumps({"file_name": file_path.name, "error": str(e)}, indent=2), flush=True)
         else:
-            print(f"Error processing {file_path.name}: {e}")
+            print(f"Error processing {file_path.name}: {e}", flush=True)
 
 
 def main():
@@ -148,9 +148,15 @@ def main():
         if not dir_path.is_dir():
             print(f"Error: Directory not found at {dir_path}")
             sys.exit(1)
-        files = [p for p in dir_path.iterdir() if p.is_file()]
-        print(f"Found {len(files)} files in {dir_path}")
-        for p in files:
+        files = sorted([p for p in dir_path.rglob("*") if p.is_file()])
+        # Filter for known document formats to ignore system or temp files
+        from inference import FORMAT_EXTENSIONS
+        all_exts = tuple(ext for exts in FORMAT_EXTENSIONS.values() for ext in exts)
+        valid_files = [p for p in files if p.suffix.lower() in all_exts]
+        if not valid_files:
+            valid_files = files  # fallback to magic byte sniffing if extensions differ
+        print(f"Found {len(valid_files)} test documents in {dir_path}", flush=True)
+        for p in valid_files:
             process_file(p, fmt=args.format, as_json=args.json)
 
 
