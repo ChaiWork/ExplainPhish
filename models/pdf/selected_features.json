@@ -1,0 +1,12 @@
+[
+  "text_length",
+  "object_count",
+  "file_size",
+  "metadata_size",
+  "title_chars",
+  "total_filters",
+  "entropy_of_streams",
+  "stream_count",
+  "endstream_count",
+  "valid_pdf_header"
+]

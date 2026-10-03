@@ -1,0 +1,35 @@
+{
+  "format": "pdf",
+  "models": [
+    "random_forest",
+    "decision_tree",
+    "logistic_regression"
+  ],
+  "n_features": 10,
+  "features": [
+    "text_length",
+    "object_count",
+    "file_size",
+    "metadata_size",
+    "title_chars",
+    "total_filters",
+    "entropy_of_streams",
+    "stream_count",
+    "endstream_count",
+    "valid_pdf_header"
+  ],
+  "validation_metrics": {
+    "logistic_regression": {
+      "roc_auc": 0.9767
+    },
+    "decision_tree": {
+      "roc_auc": 0.9971
+    },
+    "random_forest": {
+      "roc_auc": 0.9996
+    },
+    "voting_ensemble": {
+      "roc_auc": 0.9996
+    }
+  }
+}
