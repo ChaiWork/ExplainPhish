@@ -36,7 +36,8 @@ EXCLUDE_COLUMNS = {"pdf": [], "word": [], "excel": [], "html": []}
 
 # Column-name tokens that look like identifiers. A match is only removed
 # automatically if the column is non-numeric OR (numeric and almost all unique).
-ID_NAME_TOKENS = {"id", "idx", "index", "filename", "name", "path", "hash",
+# Note: "path" intentionally excluded — path_* are real XML-path count features in the Word dataset.
+ID_NAME_TOKENS = {"id", "idx", "index", "filename", "name", "hash",
                   "md5", "sha1", "sha256", "uuid", "rownum"}
 
 # Exact column names (lowercase) that reveal the target -> always removed.
@@ -44,26 +45,25 @@ LEAKAGE_EXACT_NAMES = {"label", "labels", "class", "target", "y", "verdict",
                        "is_malicious", "malicious", "is_phishing", "benign",
                        "category", "type", "family", "malware_type", "attack_type"}
 
-MAX_MISSING_COLUMN_FRACTION = 0.50   # drop a column if more than 50% is missing
-MAX_CATEGORICAL_LEVELS = 50          # text columns with more levels are treated as identifiers
-MAX_CATEGORICAL_UNIQUE_RATIO = 0.50
+# --------------------------------------------------- duplicate & leakage handling
+DROP_EXACT_DUPLICATES = False        # Keep all rows from original dataset
+DROP_FEATURE_DUPLICATES = True       # Keep rows with identical features from original dataset
+DROP_CONFLICTING_LABEL_ROWS = True   # identical features but different labels (label noise)
 
 LEAKAGE_AUC_REMOVE = 0.985           # one feature alone separates classes this well -> removed
 LEAKAGE_AUC_WARN = 0.98              # warn only
+REMOVE_HIGH_AUC_FEATURES = False     # False = audit only; True = remove features with train AUC >= 0.985
 REMOVE_STATISTICAL_LEAKAGE = True
 
-# Per-format override for the remove threshold.  Use 1.001 to effectively
-# disable removal for a format whose dataset is too synthetic to survive
-# a strict cut (e.g. Word structural features that are correlated with
-# file format still show elevated AUC after the shortcut columns are excluded).
-LEAKAGE_AUC_REMOVE_OVERRIDE = {
-    "word": 1.001,   # After excluding the 5 shortcut columns above, the remaining
-                     # structural features still show AUC 0.98-0.99 because the
-                     # CIC-Trap4Phish2025 dataset is corpus-separated (benign=.docx,
-                     # malicious=.doc).  Lowering the threshold would eliminate all
-                     # features.  Documented as a known dataset limitation.
-}
-DROP_CONFLICTING_LABEL_ROWS = True   # identical features but different labels
+# ------------------------------------------------------ missing value handling
+MISSING_STRATEGY = "median"          # "median" (impute using train median) or "remove" (drop rows/columns with missing values)
+DROP_COLUMNS_WITH_HIGH_MISSING = False  # Set to True to drop columns exceeding MAX_MISSING_COLUMN_FRACTION
+MAX_MISSING_COLUMN_FRACTION = 0.50   # drop a column if more than 50% is missing (if DROP_COLUMNS_WITH_HIGH_MISSING is True)
+MAX_CATEGORICAL_LEVELS = 50          # text columns with more levels are treated as identifiers
+MAX_CATEGORICAL_UNIQUE_RATIO = 0.50
+
+# Per-format override for the remove threshold (empty = single consistent policy for all formats).
+LEAKAGE_AUC_REMOVE_OVERRIDE = {}
 
 OUTLIER_IQR_MULTIPLIER = 3.0         # outliers are REPORTED, never deleted
 SAVE_CLEANED_DATASET = False
@@ -80,9 +80,8 @@ FEATURE_SELECTION_MODE = "auto"
 # Mode A: paste the dataset authors' feature names here (must exist as columns).
 PROVIDED_FEATURES = {"pdf": [], "word": [], "excel": [], "html": []}
 
-# Mode B: how many features to keep.
-# word: keep all remaining features after shortcut exclusion (38 features)
-TOP_N_FEATURES = {"pdf": 10, "word": -1, "excel": 10, "html": 13}
+# Mode B: how many features to keep after leakage removal (top N).
+TOP_N_FEATURES = {"pdf": 10, "word": 10, "excel": 10, "html": 13}
 SHAP_SELECTION_SAMPLES = 2000        # train rows used for SHAP ranking
 
 # ------------------------------------------------------------ model settings
