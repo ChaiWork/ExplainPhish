@@ -1,0 +1,28 @@
+{
+  "models": [
+    "random_forest",
+    "decision_tree",
+    "logistic_regression"
+  ],
+  "features": [
+    "url_punct_char_count",
+    "external_link_count",
+    "embedded_js_count",
+    "tag_count",
+    "whitespace_ratio",
+    "internal_link_count",
+    "form_count",
+    "script_entropy",
+    "entropy",
+    "total_script_characters",
+    "min_link_length",
+    "url_digit_count",
+    "html_whitespace_ratio"
+  ],
+  "validation_auc": {
+    "logistic_regression": 0.8338,
+    "random_forest": 0.9618,
+    "decision_tree": 0.91,
+    "voting_ensemble": 0.9426
+  }
+}

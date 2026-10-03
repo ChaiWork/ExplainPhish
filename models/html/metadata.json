@@ -1,0 +1,38 @@
+{
+  "format": "html",
+  "models": [
+    "random_forest",
+    "decision_tree",
+    "logistic_regression"
+  ],
+  "n_features": 13,
+  "features": [
+    "url_punct_char_count",
+    "external_link_count",
+    "embedded_js_count",
+    "tag_count",
+    "whitespace_ratio",
+    "internal_link_count",
+    "form_count",
+    "script_entropy",
+    "entropy",
+    "total_script_characters",
+    "min_link_length",
+    "url_digit_count",
+    "html_whitespace_ratio"
+  ],
+  "validation_metrics": {
+    "logistic_regression": {
+      "roc_auc": 0.8338
+    },
+    "random_forest": {
+      "roc_auc": 0.9618
+    },
+    "decision_tree": {
+      "roc_auc": 0.91
+    },
+    "voting_ensemble": {
+      "roc_auc": 0.9426
+    }
+  }
+}
