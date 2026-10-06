@@ -16,6 +16,7 @@ Usage:
     python predict.py --file sample.html
     python predict.py --file sample.xlsx
     python predict.py --file sample.docx
+    python predict.py --file sample.docx --top 5
     python predict.py --dir path/to/folder/
     python predict.py --file sample.pdf --json
 """
@@ -86,7 +87,12 @@ def format_report(res: InferenceResult) -> str:
     drivers = res.get("top_risk_drivers", [])
     if drivers:
         lines.append("")
-        lines.append("  Top Decision Drivers (Feature Impact & Standardized Z-Score):")
+        total_std = len(res.get("standardized_features", {}))
+        if total_std and len(drivers) < total_std:
+            header_title = f"Top Decision Drivers ({len(drivers)} of {total_std} Features - Impact & Standardized Z-Score):"
+        else:
+            header_title = f"Top Decision Drivers (All {len(drivers)} Active Features - Impact & Standardized Z-Score):"
+        lines.append(f"  {header_title}")
         lines.append("  " + "-" * 62)
         lines.append(f"    {'Feature Name':<28} {'Z-Score':<10} {'Impact'}")
         lines.append("  " + "-" * 62)
@@ -113,9 +119,14 @@ def format_report(res: InferenceResult) -> str:
     return "\n".join(lines)
 
 
-def process_file(file_path: Path, fmt: str | None = None, as_json: bool = False) -> None:
+def process_file(
+    file_path: Path,
+    fmt: str | None = None,
+    as_json: bool = False,
+    top: int | None = None,
+) -> None:
     try:
-        res = run_inference(file_path, fmt=fmt)
+        res = run_inference(file_path, fmt=fmt, n_top=top)
         if as_json:
             print(json.dumps(res, indent=2), flush=True)
         else:
@@ -133,6 +144,7 @@ def main():
     group.add_argument("--file", "-f", nargs="+", help="Path to single file to analyze")
     group.add_argument("--dir", "-d", nargs="+", help="Directory of files to analyze")
     parser.add_argument("--format", choices=["pdf", "excel", "html", "word"], help="Force specific format")
+    parser.add_argument("--top", "-k", type=int, default=None, help="Number of top decision drivers to display (default: all active features)")
     parser.add_argument("--json", action="store_true", help="Output raw JSON instead of text report")
 
     args = parser.parse_args()
@@ -142,7 +154,7 @@ def main():
         if not file_path.is_file():
             print(f"Error: File not found at {file_path}")
             sys.exit(1)
-        process_file(file_path, fmt=args.format, as_json=args.json)
+        process_file(file_path, fmt=args.format, as_json=args.json, top=args.top)
     elif args.dir:
         dir_path = Path(" ".join(args.dir))
         if not dir_path.is_dir():
@@ -157,7 +169,7 @@ def main():
             valid_files = files  # fallback to magic byte sniffing if extensions differ
         print(f"Found {len(valid_files)} test documents in {dir_path}", flush=True)
         for p in valid_files:
-            process_file(p, fmt=args.format, as_json=args.json)
+            process_file(p, fmt=args.format, as_json=args.json, top=args.top)
 
 
 if __name__ == "__main__":

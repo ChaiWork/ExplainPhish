@@ -240,11 +240,12 @@ def compute_risk_drivers(
     bundle: Dict[str, Any],
     raw_features: Dict[str, Any],
     std_dict: Dict[str, float],
-    n_top: int = 5,
+    n_top: Optional[int] = None,
 ) -> List[FeatureDriver]:
     """
-    Compute top decision drivers using Logistic Regression coefficients (w_j * z_j).
+    Compute decision drivers using Logistic Regression coefficients (w_j * z_j).
     Positive impact increases phishing probability, negative impact reduces it.
+    If n_top is None or <= 0, returns all active model features sorted by absolute impact.
     """
     lr = bundle.get("lr_model")
     selected_features = bundle["selected_features"]
@@ -270,10 +271,16 @@ def compute_risk_drivers(
 
     # Sort by absolute impact descending
     drivers.sort(key=lambda d: abs(d["impact"]), reverse=True)
-    return drivers[:n_top]
+    if n_top is not None and n_top > 0:
+        return drivers[:n_top]
+    return drivers
 
 
-def run_inference(file_path: str | Path, fmt: str | None = None) -> InferenceResult:
+def run_inference(
+    file_path: str | Path,
+    fmt: str | None = None,
+    n_top: Optional[int] = None,
+) -> InferenceResult:
     """
     Main inference entrypoint: extracts features, standardizes them,
     queries all three models, and evaluates voting consensus.
@@ -331,7 +338,7 @@ def run_inference(file_path: str | Path, fmt: str | None = None) -> InferenceRes
     }
 
     # 6. Explainability drivers
-    top_drivers = compute_risk_drivers(bundle, raw_features, std_dict, n_top=5)
+    top_drivers = compute_risk_drivers(bundle, raw_features, std_dict, n_top=n_top)
 
     return {
         "file_name": path.name,
