@@ -1,8 +1,8 @@
 """
 ExplainPhish Prediction & Multimodal Voting CLI
 ==============================================
-Runs the trained models (Random Forest, Decision Tree, Neural Network,
-XGBoost, LightGBM, Logistic Regression), applies StandardScaler transformation
+Runs the 5 trained voting models (Random Forest, Decision Tree, Neural Network,
+XGBoost, LightGBM), applies StandardScaler transformation
 on extracted features, computes majority voting consensus (or single-model prediction),
 and presents explainability drivers for any input file.
 
@@ -164,7 +164,7 @@ def main():
     parser.add_argument("--format", choices=["pdf", "excel", "html", "word"], help="Force specific format")
     parser.add_argument(
         "--model", "-m", type=str, default="all",
-        help="Model to use: 'all' (ensemble consensus), 'rf' (Random Forest), 'dt' (Decision Tree), 'nn' / 'mlp' (Neural Network), 'xgb' (XGBoost), 'lgb' (LightGBM)"
+        help="Model to use: 'all' (ensemble consensus across all 5 models), 'rf' (Random Forest), 'dt' (Decision Tree), 'nn' / 'mlp' (Neural Network), 'xgb' (XGBoost), 'lgb' (LightGBM)"
     )
     parser.add_argument("--top", "-k", type=int, default=None, help="Number of top decision drivers to display (default: all active features)")
     parser.add_argument("--json", action="store_true", help="Output raw JSON instead of text report")

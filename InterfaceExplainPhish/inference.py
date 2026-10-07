@@ -4,14 +4,13 @@ InterfaceExplainPhish Core Inference Engine
 Implements the standardized inference & multi-model consensus voting pipeline:
   1. Raw Feature Extraction (using format-specific extractors)
   2. StandardScaler Transformation (z = (x - mu_train) / sigma_train)
-  3. Multi-Model Inferences across all supported architectures:
+  3. Multi-Model Inferences across the 5 voting architectures:
        - Random Forest
        - Decision Tree
        - Neural Network (Multi-Layer Perceptron / MLP)
        - XGBoost (Extreme Gradient Boosting)
        - LightGBM (Light Gradient Boosting Machine)
-       - Logistic Regression (Linear Baseline & Attribution)
-  4. Consensus Voting (Majority Vote + Soft Probability Averaging + Risk Drivers)
+  4. Consensus Voting (Majority Vote across all 5 models + Soft Probability Averaging + Risk Drivers)
      or Target Single-Model Prediction when requested.
 """
 from __future__ import annotations
@@ -60,9 +59,6 @@ MODEL_ALIASES: Dict[str, str] = {
     "xgboost": "XGBoost",
     "lgb": "LightGBM",
     "lightgbm": "LightGBM",
-    "lr": "Logistic Regression",
-    "logistic regression": "Logistic Regression",
-    "logistic_regression": "Logistic Regression",
 }
 
 # In-memory cache for loaded model bundles
@@ -170,13 +166,12 @@ def load_model_bundle(fmt: str) -> Dict[str, Any]:
     """
     Load models, scaler, feature list, and metadata for a format.
     Checks InterfaceExplainPhish/models/<fmt> first, then ../models/<fmt>.
-    Dynamically loads all trained models present:
+    Dynamically loads all 5 trained models:
       - Random Forest (rf_model.joblib)
       - Decision Tree (dt_model.joblib)
       - Neural Network / MLP (mlp_model.joblib)
       - XGBoost (xgb_model.joblib)
       - LightGBM (lgb_model.joblib)
-      - Logistic Regression (lr_model.joblib)
     """
     if fmt in _MODEL_CACHE:
         return _MODEL_CACHE[fmt]
@@ -202,7 +197,6 @@ def load_model_bundle(fmt: str) -> Dict[str, Any]:
     # Load core artifacts
     rf_model = joblib.load(model_dir / "rf_model.joblib")
     dt_model = joblib.load(model_dir / "dt_model.joblib")
-    lr_model = joblib.load(model_dir / "lr_model.joblib")
     scaler = joblib.load(model_dir / "scaler.joblib")
 
     # Load advanced / format-specific models if available
@@ -231,7 +225,6 @@ def load_model_bundle(fmt: str) -> Dict[str, Any]:
         "model_dir": model_dir,
         "rf_model": rf_model,
         "dt_model": dt_model,
-        "lr_model": lr_model,
         "mlp_model": mlp_model,
         "xgb_model": xgb_model,
         "lgb_model": lgb_model,
@@ -291,27 +284,59 @@ def compute_risk_drivers(
     bundle: Dict[str, Any],
     raw_features: Dict[str, Any],
     std_dict: Dict[str, float],
+    sample_std: Optional[np.ndarray] = None,
     n_top: Optional[int] = None,
 ) -> List[FeatureDriver]:
     """
-    Compute decision drivers using Logistic Regression coefficients (w_j * z_j).
-    Positive impact increases phishing probability, negative impact reduces it.
+    Compute decision drivers using TreeExplainer SHAP values on Random Forest
+    (the primary ensemble detector) or feature importance weighted z-scores as fallback.
+    Positive impact increases phishing risk, negative impact reduces it.
     If n_top is None or <= 0, returns all active model features sorted by absolute impact.
     """
-    lr = bundle.get("lr_model")
+    rf = bundle.get("rf_model")
     selected_features = bundle["selected_features"]
-    
-    if lr is None or not hasattr(lr, "coef_"):
+
+    if rf is None:
         return []
 
-    coefs = lr.coef_[0]
-    drivers = []
+    if sample_std is None:
+        sample_std = np.array([[std_dict.get(feat, 0.0) for feat in selected_features]])
 
+    shap_impacts: Optional[List[float]] = None
+
+    # 1. Primary: Use SHAP TreeExplainer on Random Forest for non-linear feature attribution
+    try:
+        import shap
+        explainer = bundle.get("_rf_shap_explainer")
+        if explainer is None:
+            explainer = shap.TreeExplainer(rf)
+            bundle["_rf_shap_explainer"] = explainer
+
+        shap_vals = explainer.shap_values(sample_std)
+        # Binary classification SHAP values: extract class 1 (malicious)
+        if isinstance(shap_vals, list) and len(shap_vals) > 1:
+            shap_impacts = [float(v) for v in shap_vals[1][0]]
+        elif hasattr(shap_vals, "ndim") and shap_vals.ndim == 3 and shap_vals.shape[2] > 1:
+            shap_impacts = [float(v) for v in shap_vals[0, :, 1]]
+        elif hasattr(shap_vals, "ndim") and shap_vals.ndim == 2:
+            shap_impacts = [float(v) for v in shap_vals[0]]
+    except Exception:
+        shap_impacts = None
+
+    drivers: List[FeatureDriver] = []
     for idx, feat in enumerate(selected_features):
         z_val = std_dict.get(feat, 0.0)
-        impact = float(coefs[idx] * z_val)
-        direction = "↑" if impact > 0 else "↓"
         raw_val = raw_features.get(feat, 0)
+
+        if shap_impacts is not None and idx < len(shap_impacts):
+            impact = shap_impacts[idx]
+        elif hasattr(rf, "feature_importances_"):
+            rf_imp = float(rf.feature_importances_[idx])
+            impact = float(rf_imp * z_val)
+        else:
+            impact = 0.0
+
+        direction = "↑" if impact > 0 else "↓"
         drivers.append({
             "feature": feat,
             "impact": round(impact, 4),
@@ -335,8 +360,8 @@ def run_inference(
 ) -> InferenceResult:
     """
     Main inference entrypoint: extracts features, standardizes them,
-    queries all implemented models (Random Forest, Decision Tree, Neural Network,
-    XGBoost, LightGBM, Logistic Regression), and evaluates voting consensus or
+    queries all 5 voting models (Random Forest, Decision Tree, Neural Network,
+    XGBoost, LightGBM), and evaluates voting consensus or
     specific single-model prediction.
     """
     path = Path(file_path).resolve()
@@ -358,14 +383,13 @@ def run_inference(
     # 3. Standardize features
     sample_std, std_dict = standardize_features(raw_features, selected_features, scaler)
 
-    # 4. Multi-model predictions across all available architectures
+    # 4. Multi-model predictions across the 5 voting architectures
     model_registry: List[Tuple[str, Any]] = [
         ("Random Forest", bundle.get("rf_model")),
         ("Decision Tree", bundle.get("dt_model")),
         ("Neural Network", bundle.get("mlp_model")),
         ("XGBoost", bundle.get("xgb_model")),
         ("LightGBM", bundle.get("lgb_model")),
-        ("Logistic Regression", bundle.get("lr_model")),
     ]
 
     predictions: List[ModelPrediction] = []
@@ -412,11 +436,8 @@ def run_inference(
             "target_model": normalized_target,
         }
     else:
-        # Multimodal consensus voting across primary non-linear detectors
-        primary_voting_names = ["Random Forest", "Decision Tree", "Neural Network", "XGBoost", "LightGBM"]
-        voting_candidates = [p for p in predictions if p["model"] in primary_voting_names]
-        if not voting_candidates:
-            voting_candidates = predictions
+        # Multimodal consensus voting across all 5 models
+        voting_candidates = predictions
 
         malicious_votes = sum([p["prediction"] for p in voting_candidates])
         benign_votes = len(voting_candidates) - malicious_votes
@@ -438,7 +459,9 @@ def run_inference(
         }
 
     # 6. Explainability drivers
-    top_drivers = compute_risk_drivers(bundle, raw_features, std_dict, n_top=n_top)
+    top_drivers = compute_risk_drivers(
+        bundle, raw_features, std_dict, sample_std=sample_std, n_top=n_top
+    )
 
     return {
         "file_name": path.name,

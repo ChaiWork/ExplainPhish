@@ -3,7 +3,9 @@
   "models": [
     "random_forest",
     "decision_tree",
-    "logistic_regression"
+    "neural_network_mlp",
+    "xgboost",
+    "lightgbm"
   ],
   "n_features": 9,
   "features": [
@@ -17,18 +19,16 @@
     "remote_template_present",
     "avg_cell_length"
   ],
-  "validation_metrics": {
-    "logistic_regression": {
-      "roc_auc": 0.9984
-    },
-    "decision_tree": {
-      "roc_auc": 0.9994
-    },
-    "random_forest": {
-      "roc_auc": 1.0
-    },
-    "voting_ensemble": {
-      "roc_auc": 1.0
-    }
+  "best_rf_params": {
+    "n_estimators": 200,
+    "min_samples_split": 2,
+    "min_samples_leaf": 1,
+    "max_features": 0.5,
+    "max_depth": 16
+  },
+  "test_metrics": {
+    "roc_auc": 1.0,
+    "accuracy": 0.9996,
+    "f1": 0.9996
   }
 }

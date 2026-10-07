@@ -5,37 +5,34 @@
     "decision_tree",
     "neural_network_mlp",
     "xgboost",
-    "lightgbm",
-    "logistic_regression"
+    "lightgbm"
   ],
   "n_features": 13,
   "features": [
     "url_punct_char_count",
-    "external_link_count",
-    "embedded_js_count",
     "tag_count",
     "whitespace_ratio",
-    "internal_link_count",
-    "form_count",
-    "script_entropy",
     "entropy",
-    "total_script_characters",
+    "form_count",
+    "embedded_js_count",
+    "html_whitespace_ratio",
+    "script_entropy",
     "min_link_length",
-    "url_digit_count",
-    "html_whitespace_ratio"
+    "external_link_count",
+    "total_script_characters",
+    "internal_link_count",
+    "url_digit_count"
   ],
-  "validation_metrics": {
-    "logistic_regression": {
-      "roc_auc": 0.8338
-    },
-    "random_forest": {
-      "roc_auc": 0.9618
-    },
-    "decision_tree": {
-      "roc_auc": 0.91
-    },
-    "voting_ensemble": {
-      "roc_auc": 0.9426
-    }
+  "best_rf_params": {
+    "n_estimators": 200,
+    "min_samples_split": 2,
+    "min_samples_leaf": 1,
+    "max_features": 0.5,
+    "max_depth": 16
+  },
+  "test_metrics": {
+    "roc_auc": 0.9806,
+    "accuracy": 0.9314,
+    "f1": 0.9307
   }
 }

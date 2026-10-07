@@ -32,7 +32,6 @@ ExplainPhish provides static analysis, feature extraction, standard scaling, and
    - **Neural Network / MLP** (Non-linear Dense Feedforward Network)
    - **XGBoost** (Extreme Gradient Boosting)
    - **LightGBM** (Light Gradient Boosting Machine)
-   *(Plus Logistic Regression companion for linear risk attribution)*
 4. **Consensus Voting or Single-Model Prediction**: Evaluates majority consensus across all 5 models or predicts using a specific user-selected model via `--model`.
 
 ## Running Inference & Voting (predict.py)
@@ -67,7 +66,7 @@ python predict.py --file "Sample\pbenign_pdf\i1040nre.pdf" --json
 - **Detected Format**: Suffix and magic signature detection
 - **Extracted Features**: Real-time static document parsing
 - **Standardized Z-Scores**: Calibrated deviations from the training baseline
-- **Individual Models**: Predictions and malicious probabilities from Random Forest, Decision Tree, and Logistic Regression
+- **Individual Models**: Predictions and malicious probabilities from the 5 voting models (Random Forest, Decision Tree, Neural Network, XGBoost, and LightGBM)
 - **Consensus Voting**: Majority vote verdict (`MALICIOUS` / `BENIGN`), confidence score, confidence band (`HIGH` / `MEDIUM` / `LOW`), and agreement status
 - **Top Decision Drivers**: Top features driving the prediction with their directionality (`[+] Increases Risk` vs `[-] Reduces Risk`) and standardized impact score
 
