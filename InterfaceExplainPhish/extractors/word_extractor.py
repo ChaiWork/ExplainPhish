@@ -6,6 +6,7 @@ Supports: .docx  .docm  .dotx  .dotm  .doc  .dot
 Dependencies: optional olefile, oletools for legacy .doc and deep VBA analysis
 """
 from __future__ import annotations
+import json
 
 import math
 import os
@@ -190,5 +191,16 @@ def extract(file_path: str | Path) -> dict:
     missing = [k for k in REQUIRED_KEYS if k not in feats]
     if missing:
         raise ExtractionError(f"[word extractor] Missing keys: {missing}")
+
+    # Align with selected_features.json if present
+    schema_path = Path(__file__).resolve().parent.parent / "models" / "word" / "selected_features.json"
+    if schema_path.exists():
+        try:
+            with open(schema_path, "r", encoding="utf-8") as sf:
+                selected_keys = json.load(sf)
+                if isinstance(selected_keys, list):
+                    return {k: feats.get(k, 0) for k in selected_keys}
+        except Exception:
+            pass
 
     return feats

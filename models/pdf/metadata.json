@@ -1,9 +1,9 @@
 {
   "format": "pdf",
   "models": [
+    "xgboost",
     "random_forest",
-    "decision_tree",
-    "logistic_regression"
+    "decision_tree"
   ],
   "n_features": 10,
   "features": [
@@ -19,17 +19,20 @@
     "valid_pdf_header"
   ],
   "validation_metrics": {
-    "logistic_regression": {
-      "roc_auc": 0.9767
-    },
-    "decision_tree": {
-      "roc_auc": 0.9971
+    "xgboost": {
+      "roc_auc": 1.0
     },
     "random_forest": {
       "roc_auc": 0.9996
     },
+    "decision_tree": {
+      "roc_auc": 0.9971
+    },
+    "logistic_regression": {
+      "roc_auc": 0.9767
+    },
     "voting_ensemble": {
-      "roc_auc": 0.9996
+      "roc_auc": 0.9999
     }
   }
 }

@@ -26,8 +26,9 @@ ExplainPhish provides static analysis, feature extraction, standard scaling, and
 ### Standardized Inference Pipeline
 1. **Feature Extraction**: Static parsing without dynamic execution (file size limit: 50MB, zip bomb protection).
 2. **StandardScaler Alignment**: Raw feature values are transformed using the fitted scaler from training ($z = \frac{x - \mu}{\sigma}$), preventing scale explosion and ensuring zero training-serving skew.
-3. **Multi-Model Inferences**: Evaluated simultaneously by **Random Forest**, **Decision Tree**, and **Logistic Regression**.
+3. **Multi-Model Inferences**: Evaluated simultaneously by **Random Forest**, **Decision Tree**, and **XGBoost** (replacing legacy Logistic Regression for high-precision gradient-boosted detection).
 4. **Consensus Voting**: Hard majority vote ($\ge 2/3$) decides the verdict (`MALICIOUS` vs `BENIGN`), complemented by soft probability averaging, confidence bands (`HIGH`, `MEDIUM`, `LOW`), and directional risk drivers ($w_j \times z_j$).
+5. **LangGraph Autonomous SOC Agent**: Multi-stage state graph with intake safety, ML ensemble, explainable attribution, conditional borderline routing, deep static threat forensics, MITRE ATT&CK technique mapping, and automated SOAR remediation report generation.
 
 ## Running Inference & Voting (predict.py)
 
@@ -54,9 +55,65 @@ python predict.py --file "Sample\pbenign_pdf\i1040nre.pdf" --json
 - **Detected Format**: Suffix and magic signature detection
 - **Extracted Features**: Real-time static document parsing
 - **Standardized Z-Scores**: Calibrated deviations from the training baseline
-- **Individual Models**: Predictions and malicious probabilities from Random Forest, Decision Tree, and Logistic Regression
+- **Individual Models**: Predictions and malicious probabilities from Random Forest, Decision Tree, and XGBoost
 - **Consensus Voting**: Majority vote verdict (`MALICIOUS` / `BENIGN`), confidence score, confidence band (`HIGH` / `MEDIUM` / `LOW`), and agreement status
 - **Top Decision Drivers**: Top features driving the prediction with their directionality (`[+] Increases Risk` vs `[-] Reduces Risk`) and standardized impact score
+
+---
+
+## Autonomous LangGraph SOC Agent (langgraph_pipeline.py)
+
+`langgraph_pipeline.py` implements an enterprise SOC triage agent graph built with **LangGraph**:
+
+```
+  [Intake & Safety Check]
+            │
+            ▼
+  [Feature Extraction]
+            │
+            ▼
+  [ML Ensemble: XGBoost + RF + DT]
+            │
+            ▼
+  [Explainability & Risk Drivers]
+            │
+            ▼
+   <Is Borderline / Ambiguous?>
+      │                  │
+      │ (Yes)            │ (No - Clear Verdict)
+      ▼                  │
+ [Deep Threat Forensics] │
+      │                  │
+      └─────────┬────────┘
+                │
+                ▼
+      [MITRE ATT&CK Mapping]
+                │
+                ▼
+      [SOC Report Generation]
+```
+
+### Key Capabilities:
+1. **Intake & Anti-Evasion**: File size limits (<50MB), anti-ZIP bomb ratio checks, cryptographic hashing (SHA-256 + MD5).
+2. **Standardized ML Voting**: Multi-model inference combining Random Forest, Decision Tree, and XGBoost.
+3. **Autonomous Conditional Escalation**: Detects borderline uncertainty (e.g. split votes, probability ambiguity, or Office documents without macros flagged as malicious). Routes automatically to **Deep Threat Forensics**.
+4. **Deep Threat Forensics**: Static inspection for obfuscated JavaScript, credential input forms, PDF `/Launch` and `/JavaScript` triggers, VBA archive streams, remote template injection, and DDE formulas. Screens false positives and upgrades evasive payloads.
+5. **MITRE ATT&CK Alignment**: Automatically identifies technique IDs (e.g., T1566.001, T1566.002, T1059.005, T1059.007, T1056.001, T1204.002, T1221).
+6. **Prescriptive SOAR Playbook**: Generates actionable tier-by-tier remediation actions (EDR hash isolation, Network perimeter domain block, M365 tenant mail sweep, Identity revocation).
+7. **Report Persistence**: Automatically outputs audit-ready Markdown incident reports into `InterfaceExplainPhish/reports/`.
+
+### Running the LangGraph Agent:
+
+```bash
+# Analyze suspicious file and print markdown SOC Incident Report:
+python langgraph_pipeline.py --file ../word/samples/phishing_login.html
+
+# Analyze Excel sheet with automated false-positive screening:
+python langgraph_pipeline.py --file ../word/samples/financial_report.xlsx
+
+# Output structured JSON for SIEM/SOAR automation:
+python langgraph_pipeline.py --file ../word/samples/phishing_login.html --json
+```
 
 ---
 

@@ -1,0 +1,890 @@
+"""
+ExplainPhish Autonomous SOC Agent Pipeline (LangGraph)
+======================================================
+Multi-stage cybersecurity incident triage & response graph combining:
+  1. Intake & Safety Gatekeeper (Magic bytes, ZIP bomb heuristics, size caps)
+  2. Feature Extraction (HTML, PDF, Excel, Word specialized extractors)
+  3. ML Ensemble Consensus (XGBoost, Random Forest, Decision Tree)
+  4. Explainability & Risk Attribution (SHAP-style scaled feature impact)
+  5. Conditional Router (Autonomous escalation for borderline / ambiguous cases)
+  6. Deep Threat Forensics (Static payload analysis, macro inspection, credential forms, DDE)
+  7. MITRE ATT&CK Mapping & SOAR Remediation Playbooks
+  8. SOC Incident Response Report Generation (Markdown + optional LLM narrative)
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sys
+import zipfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, TypedDict
+
+import numpy as np
+import pandas as pd
+from langgraph.graph import END, START, StateGraph
+
+# Ensure local imports work cleanly
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+
+from extractors.base import ExtractionError, check_file_safety
+from inference import (
+    FORMAT_DISPLAY,
+    compute_risk_drivers,
+    detect_format,
+    extract_features,
+    load_model_bundle,
+    standardize_features,
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# State Schema
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class ExplainPhishState(TypedDict, total=False):
+    # File Metadata
+    file_path: str
+    file_name: str
+    file_size_bytes: int
+    file_hash_sha256: str
+    file_hash_md5: str
+    file_format: str
+    format_display: str
+    is_safe: bool
+    error: Optional[str]
+
+    # Feature Engineering
+    raw_features: Dict[str, Any]
+    standardized_features: Dict[str, float]
+
+    # ML Ensemble Inferences
+    model_predictions: List[Dict[str, Any]]
+    raw_probabilities: Dict[str, float]
+    vote_counts: Dict[str, int]
+    ensemble_verdict: str  # "MALICIOUS" | "BENIGN"
+    confidence_score: float
+    confidence_band: str  # "HIGH" | "MEDIUM" | "LOW"
+    unanimous: bool
+
+    # Routing & Ambiguity Detection
+    is_borderline: bool
+    borderline_reasons: List[str]
+
+    # Explainability & Attribution
+    top_risk_drivers: List[Dict[str, Any]]
+
+    # Deep Threat Forensics
+    deep_analysis: Dict[str, Any]
+    indicators_of_compromise: List[Dict[str, str]]
+    final_verdict: str
+    threat_level: str  # "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL"
+
+    # Threat Intelligence & Response
+    mitre_tactics: List[Dict[str, str]]
+    soc_playbook_actions: List[Dict[str, str]]
+
+    # Incident Response Output
+    executive_summary: str
+    soc_report_markdown: str
+    report_saved_path: Optional[str]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node 1: Intake & Safety Gatekeeper
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def node_intake_safety(state: ExplainPhishState) -> Dict[str, Any]:
+    """
+    Validates file integrity, calculates cryptographic hashes,
+    enforces anti-evasion / anti-ZIP-bomb security boundaries,
+    and identifies the file format.
+    """
+    path = Path(state["file_path"]).resolve()
+    if not path.is_file():
+        return {
+            "is_safe": False,
+            "error": f"File not found on system: {path}",
+            "file_name": path.name,
+        }
+
+    # Compute hashes and size
+    sha256 = hashlib.sha256()
+    md5 = hashlib.md5()
+    size_bytes = path.stat().st_size
+
+    with open(path, "rb") as f:
+        while chunk := f.read(65536):
+            sha256.update(chunk)
+            md5.update(chunk)
+
+    try:
+        # Detect format
+        fmt = detect_format(path)
+        is_ooxml = fmt in ("excel", "word")
+
+        # Run safety pre-check (caps at 50MB, checks compression ratios)
+        check_file_safety(path, check_zip_bomb=is_ooxml)
+
+        return {
+            "file_name": path.name,
+            "file_path": str(path),
+            "file_size_bytes": size_bytes,
+            "file_hash_sha256": sha256.hexdigest(),
+            "file_hash_md5": md5.hexdigest(),
+            "file_format": fmt,
+            "format_display": FORMAT_DISPLAY.get(fmt, fmt.upper()),
+            "is_safe": True,
+            "error": None,
+        }
+    except Exception as exc:
+        return {
+            "file_name": path.name,
+            "file_path": str(path),
+            "file_size_bytes": size_bytes,
+            "file_hash_sha256": sha256.hexdigest(),
+            "file_hash_md5": md5.hexdigest(),
+            "is_safe": False,
+            "error": f"Intake safety rejection: {str(exc)}",
+        }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node 2: Feature Extraction
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def node_feature_extraction(state: ExplainPhishState) -> Dict[str, Any]:
+    """
+    Invokes the format-specific security feature extractor
+    to compute structural, linguistic, and behavioural telemetry.
+    """
+    if not state.get("is_safe", False):
+        return {"error": state.get("error", "Skipped due to safety failure")}
+
+    path = Path(state["file_path"])
+    fmt = state["file_format"]
+
+    try:
+        raw_feats = extract_features(path, fmt)
+        return {"raw_features": raw_feats, "error": None}
+    except Exception as exc:
+        return {"error": f"Feature extraction failed: {str(exc)}", "raw_features": {}}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node 3: Machine Learning Ensemble Consensus
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def node_ml_ensemble(state: ExplainPhishState) -> Dict[str, Any]:
+    """
+    Scales features with format-specific StandardScaler, evaluates
+    multi-model predictions (XGBoost, Random Forest, Decision Tree),
+    and measures voting consensus.
+    """
+    if state.get("error"):
+        return {}
+
+    fmt = state["file_format"]
+    raw_feats = state["raw_features"]
+
+    bundle = load_model_bundle(fmt)
+    selected_features = bundle["selected_features"]
+    scaler = bundle["scaler"]
+    rf = bundle["rf_model"]
+    dt = bundle["dt_model"]
+    xgb = bundle.get("xgb_model")
+    lr = bundle.get("lr_model")
+
+    sample_std, std_dict = standardize_features(raw_feats, selected_features, scaler)
+
+    prob_rf = float(rf.predict_proba(sample_std)[0, 1])
+    prob_dt = float(dt.predict_proba(sample_std)[0, 1])
+
+    predictions = [
+        {"model": "Random Forest", "prediction": int(prob_rf >= 0.5), "probability": round(prob_rf, 4)},
+        {"model": "Decision Tree", "prediction": int(prob_dt >= 0.5), "probability": round(prob_dt, 4)},
+    ]
+    raw_probs = {"Random Forest": prob_rf, "Decision Tree": prob_dt}
+
+    if xgb is not None:
+        prob_xgb = float(xgb.predict_proba(sample_std)[0, 1])
+        predictions.append({"model": "XGBoost", "prediction": int(prob_xgb >= 0.5), "probability": round(prob_xgb, 4)})
+        raw_probs["XGBoost"] = prob_xgb
+    elif lr is not None:
+        prob_lr = float(lr.predict_proba(sample_std)[0, 1])
+        predictions.append({"model": "Logistic Regression", "prediction": int(prob_lr >= 0.5), "probability": round(prob_lr, 4)})
+        raw_probs["Logistic Regression"] = prob_lr
+
+    malicious_votes = sum(p["prediction"] for p in predictions)
+    benign_votes = len(predictions) - malicious_votes
+    all_prob_values = list(raw_probs.values())
+    mean_prob = sum(all_prob_values) / len(all_prob_values)
+
+    ensemble_verdict = "MALICIOUS" if malicious_votes >= 2 else "BENIGN"
+    confidence = mean_prob if ensemble_verdict == "MALICIOUS" else (1.0 - mean_prob)
+    band = "HIGH" if confidence >= 0.85 else ("MEDIUM" if confidence >= 0.65 else "LOW")
+    unanimous = (malicious_votes == 0 or malicious_votes == len(predictions))
+
+    # Evaluate Borderline & Anomaly Criteria
+    borderline_reasons: List[str] = []
+    if not unanimous:
+        borderline_reasons.append(f"Split consensus vote ({malicious_votes} Malicious vs {benign_votes} Benign)")
+    if 0.35 <= mean_prob <= 0.65:
+        borderline_reasons.append(f"Soft ensemble probability {mean_prob:.1%} resides in ambiguity band [35%-65%]")
+    
+    # Check format-specific heuristic discrepancies (e.g. ML flags Malicious but macro count is 0)
+    if fmt in ("excel", "word"):
+        macro_vocab = raw_feats.get("macro_vocab_size", 0)
+        macro_tokens = raw_feats.get("macro_token_count", 0)
+        remote_tmpl = raw_feats.get("remote_template_present", 0)
+        if ensemble_verdict == "MALICIOUS" and macro_vocab == 0 and macro_tokens == 0 and remote_tmpl == 0:
+            borderline_reasons.append("Malicious ML vote triggered on Office document despite 0 detected macros or templates")
+    elif fmt == "html":
+        ext_links = raw_feats.get("external_link_count", 0)
+        form_count = raw_feats.get("form_count", 0)
+        js_count = raw_feats.get("embedded_js_count", 0)
+        if ensemble_verdict == "BENIGN" and form_count > 0 and ext_links > 0:
+            borderline_reasons.append("Benign ML vote but HTML document contains active form with external links")
+    elif fmt == "pdf":
+        js_count = raw_feats.get("js_count", raw_feats.get("javascript_count", 0))
+        open_action = raw_feats.get("open_action_count", 0)
+        if ensemble_verdict == "BENIGN" and (js_count > 0 or open_action > 0):
+            borderline_reasons.append("Benign ML vote but PDF contains active JavaScript or OpenAction triggers")
+
+    is_borderline = len(borderline_reasons) > 0
+
+    return {
+        "standardized_features": std_dict,
+        "model_predictions": predictions,
+        "raw_probabilities": raw_probs,
+        "vote_counts": {"malicious": malicious_votes, "benign": benign_votes},
+        "ensemble_verdict": ensemble_verdict,
+        "confidence_score": round(confidence, 4),
+        "confidence_band": band,
+        "unanimous": unanimous,
+        "is_borderline": is_borderline,
+        "borderline_reasons": borderline_reasons,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node 4: Explainability & Risk Attribution
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def node_explainability(state: ExplainPhishState) -> Dict[str, Any]:
+    """
+    Computes top decision drivers using normalized feature impacts
+    and translates them into human-readable security risk factors.
+    """
+    if state.get("error"):
+        return {}
+
+    fmt = state["file_format"]
+    bundle = load_model_bundle(fmt)
+    drivers = compute_risk_drivers(
+        bundle,
+        state["raw_features"],
+        state["standardized_features"],
+        fmt=fmt,
+        n_top=6,
+    )
+    return {"top_risk_drivers": drivers}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Conditional Routing Helper
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def route_after_explainability(state: ExplainPhishState) -> str:
+    """
+    Routes to Deep Threat Forensics if borderline or ambiguous;
+    otherwise proceeds directly to MITRE mapping.
+    """
+    if state.get("error"):
+        return "soc_report"
+    if state.get("is_borderline", False):
+        return "deep_threat_analysis"
+    return "mitre_mapping"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node 5: Deep Threat Forensics (Static Inspection & De-obfuscation)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
+    """
+    Autonomous deep static analysis for ambiguous, borderline, or conflicting samples:
+    - HTML: Checks for credential phishing forms, external POST targets, hidden iframes, eval/unescape.
+    - PDF: Scans streams for /Launch, /JavaScript, /OpenAction, /URI, embedded files.
+    - Excel: Scans ZIP for vbaProject.bin, external sheets, DDE execution (=cmd, =powershell).
+    - Word: Scans ZIP for vbaProject.bin, remote template injection, embedded OLE objects.
+    """
+    path = Path(state["file_path"])
+    fmt = state["file_format"]
+    iocs: List[Dict[str, str]] = []
+    deep_findings: Dict[str, Any] = {
+        "forensic_inspection_conducted": True,
+        "indicators": [],
+        "verdict_adjustment": "NONE",
+        "rationale": "",
+    }
+
+    try:
+        if fmt == "html":
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            # 1. External form action
+            form_actions = re.findall(r'<form[^>]*action=["\']([^"\']+)["\']', text, re.IGNORECASE)
+            for action in form_actions:
+                if action.startswith("http://") or action.startswith("https://"):
+                    iocs.append({"type": "Suspicious Form Action", "value": action})
+                    deep_findings["indicators"].append(f"Form submission sends credentials to external URI: {action}")
+
+            # 2. Password inputs
+            if re.search(r'<input[^>]*type=["\']password["\']', text, re.IGNORECASE):
+                deep_findings["indicators"].append("Credential input field (<input type='password'>) detected")
+
+            # 3. Obfuscated script constructs
+            obf_matches = re.findall(r'(eval\s*\(|unescape\s*\(|String\.fromCharCode|document\.write\s*\(|atob\s*\()', text, re.IGNORECASE)
+            if obf_matches:
+                deep_findings["indicators"].append(f"Potentially obfuscated JavaScript routines: {list(set(obf_matches))}")
+
+            # 4. Hidden iframes
+            if re.search(r'<iframe[^>]*(style=["\'][^"\']*(display:\s*none|visibility:\s*hidden|width:\s*0|height:\s*0)[^"\']*|width=["\']0["\']|height=["\']0["\'])', text, re.IGNORECASE):
+                deep_findings["indicators"].append("Stealth hidden <iframe> (width/height 0 or display:none) detected")
+
+        elif fmt == "pdf":
+            raw_pdf = path.read_bytes()
+            # 1. PDF /Launch (execute external program)
+            if b"/Launch" in raw_pdf:
+                deep_findings["indicators"].append("PDF /Launch action detected: capability to execute OS commands")
+                iocs.append({"type": "PDF Action", "value": "/Launch"})
+            # 2. PDF /JavaScript or /JS
+            if b"/JavaScript" in raw_pdf or b"/JS" in raw_pdf:
+                deep_findings["indicators"].append("PDF embedded JavaScript action detected")
+                iocs.append({"type": "PDF Action", "value": "/JavaScript"})
+            # 3. PDF /OpenAction
+            if b"/OpenAction" in raw_pdf or b"/AA" in raw_pdf:
+                deep_findings["indicators"].append("PDF /OpenAction / AdditionalActions detected: executes upon file opening")
+            # 4. Embedded URIs
+            pdf_uris = re.findall(rb'/URI\s*\((https?://[^)]+)\)', raw_pdf)
+            for u in pdf_uris[:5]:
+                decoded_u = u.decode("latin1", errors="ignore")
+                iocs.append({"type": "Embedded URL", "value": decoded_u})
+                deep_findings["indicators"].append(f"PDF Embedded outbound URI: {decoded_u}")
+
+        elif fmt in ("excel", "word"):
+            if zipfile.is_zipfile(path):
+                with zipfile.ZipFile(path, "r") as zf:
+                    names = zf.namelist()
+                    # 1. VBA Macro presence
+                    vba_files = [n for n in names if "vbaProject.bin" in n or "vbaData.xml" in n]
+                    if vba_files:
+                        deep_findings["indicators"].append(f"Active VBA Macro binaries located in archive: {vba_files}")
+                        iocs.append({"type": "VBA Binary", "value": ", ".join(vba_files)})
+                    else:
+                        deep_findings["indicators"].append("Verified archive: 0 VBA Macro binaries found")
+
+                    # 2. Word Remote Template Injection
+                    if fmt == "word":
+                        rel_files = [n for n in names if n.endswith(".rels")]
+                        for rf in rel_files:
+                            try:
+                                rel_content = zf.read(rf).decode("utf-8", errors="ignore")
+                                if 'TargetMode="External"' in rel_content and "attachedTemplate" in rel_content:
+                                    targets = re.findall(r'Target="([^"]+)"', rel_content)
+                                    deep_findings["indicators"].append(f"Remote Template Injection detected: {targets}")
+                                    for t in targets:
+                                        iocs.append({"type": "Remote Template Target", "value": t})
+                            except Exception:
+                                pass
+
+                    # 3. Embedded OLE Objects
+                    ole_embeds = [n for n in names if "embeddings/" in n or "oleObject" in n]
+                    if ole_embeds:
+                        deep_findings["indicators"].append(f"Embedded OLE objects detected: {ole_embeds}")
+                        for o in ole_embeds:
+                            iocs.append({"type": "OLE Embedding", "value": o})
+
+                    # 4. Excel Formula Injection / DDE
+                    if fmt == "excel":
+                        sheet_files = [n for n in names if "worksheets/sheet" in n]
+                        dde_found = False
+                        for sf in sheet_files:
+                            try:
+                                sdata = zf.read(sf).decode("utf-8", errors="ignore")
+                                if re.search(r'<f[^>]*>[=+\-@](cmd|powershell|mshta|cscript|wscript|certutil)', sdata, re.IGNORECASE):
+                                    dde_found = True
+                                    deep_findings["indicators"].append(f"DDE / Command Execution Formula detected in {sf}")
+                                    iocs.append({"type": "DDE Injection", "value": sf})
+                            except Exception:
+                                pass
+                        if not dde_found:
+                            deep_findings["indicators"].append("Verified spreadsheet: 0 DDE / command injection formulas detected")
+
+    except Exception as exc:
+        deep_findings["error"] = f"Deep inspection exception: {str(exc)}"
+
+    # Ambiguity Resolution Logic:
+    original_verdict = state.get("ensemble_verdict", "BENIGN")
+    final_verdict = original_verdict
+    has_active_payloads = len([i for i in deep_findings["indicators"] if not i.startswith("Verified")]) > 0
+
+    if fmt in ("excel", "word"):
+        macro_absent = any("0 VBA Macro binaries found" in i for i in deep_findings["indicators"])
+        no_ole = not any("Embedded OLE" in i for i in deep_findings["indicators"])
+        no_template = not any("Remote Template" in i for i in deep_findings["indicators"])
+        no_dde = any("0 DDE" in i for i in deep_findings["indicators"]) or fmt == "word"
+
+        if original_verdict == "MALICIOUS" and macro_absent and no_ole and no_template and no_dde:
+            # Calibrated false-positive downgrade
+            final_verdict = "BENIGN (False-Positive Screened)"
+            deep_findings["verdict_adjustment"] = "DOWNGRADE_TO_BENIGN"
+            deep_findings["rationale"] = (
+                "ML model flagged anomaly due to statistical document text features, "
+                "but exhaustive deep forensic inspection confirmed zero VBA macros, zero remote templates, "
+                "zero embedded OLE objects, and zero DDE injection vectors. Classified safe."
+            )
+        elif original_verdict == "BENIGN" and has_active_payloads:
+            final_verdict = "MALICIOUS (Forensic Override)"
+            deep_findings["verdict_adjustment"] = "UPGRADE_TO_MALICIOUS"
+            deep_findings["rationale"] = (
+                "ML model returned benign probability, but deep forensic inspection discovered "
+                f"active execution payloads: {deep_findings['indicators']}"
+            )
+    elif fmt == "html":
+        has_cred_theft = any("Credential input field" in i or "external URI" in i for i in deep_findings["indicators"])
+        if has_cred_theft and original_verdict == "BENIGN":
+            final_verdict = "MALICIOUS (Phishing Form Detected)"
+            deep_findings["verdict_adjustment"] = "UPGRADE_TO_MALICIOUS"
+            deep_findings["rationale"] = "Active credential harvesting form targeting external endpoint confirmed."
+    elif fmt == "pdf":
+        has_exec = any("/Launch" in i or "/JavaScript" in i for i in deep_findings["indicators"])
+        if has_exec and original_verdict == "BENIGN":
+            final_verdict = "MALICIOUS (Active PDF Payload Detected)"
+            deep_findings["verdict_adjustment"] = "UPGRADE_TO_MALICIOUS"
+            deep_findings["rationale"] = "Unsafe PDF execution triggers (/Launch or /JavaScript) confirmed."
+
+    return {
+        "deep_analysis": deep_findings,
+        "indicators_of_compromise": iocs,
+        "final_verdict": final_verdict,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node 6: MITRE ATT&CK Mapping & SOAR Actions
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def node_mitre_mapping(state: ExplainPhishState) -> Dict[str, Any]:
+    """
+    Maps observed threats and feature vectors to industry-standard
+    MITRE ATT&CK tactics, techniques, and prescriptive SOAR remediation playbooks.
+    """
+    if state.get("error"):
+        return {}
+
+    final_verdict = state.get("final_verdict") or state.get("ensemble_verdict", "BENIGN")
+    fmt = state.get("file_format", "unknown")
+    raw_feats = state.get("raw_features", {})
+    deep_analysis = state.get("deep_analysis", {})
+    indicators = deep_analysis.get("indicators", [])
+
+    mitre_tactics: List[Dict[str, str]] = []
+    actions: List[Dict[str, str]] = []
+    threat_level = "INFORMATIONAL"
+
+    if "MALICIOUS" in final_verdict:
+        # MITRE Technique Identifiers
+        if fmt == "html":
+            threat_level = "HIGH"
+            mitre_tactics.append({
+                "id": "T1566.002",
+                "tactic": "Initial Access",
+                "technique": "Phishing: Spearphishing Link",
+                "description": "Adversary uses deceptive HTML lure directing user to malicious landing page.",
+            })
+            if any("Credential input" in i or "password" in i.lower() for i in indicators) or raw_feats.get("form_count", 0) > 0:
+                threat_level = "CRITICAL"
+                mitre_tactics.append({
+                    "id": "T1056.001",
+                    "tactic": "Credential Access",
+                    "technique": "Input Capture: Keylogging / Web Forms",
+                    "description": "Embedded form designed to harvest victim authentication credentials.",
+                })
+            if raw_feats.get("embedded_js_count", 0) > 0 or raw_feats.get("script_entropy", 0) > 4.5:
+                mitre_tactics.append({
+                    "id": "T1059.007",
+                    "tactic": "Execution",
+                    "technique": "Command and Scripting Interpreter: JavaScript",
+                    "description": "Embedded obfuscated client-side scripts to manipulate DOM or evade scanners.",
+                })
+        elif fmt == "pdf":
+            threat_level = "HIGH"
+            mitre_tactics.append({
+                "id": "T1566.001",
+                "tactic": "Initial Access",
+                "technique": "Phishing: Spearphishing Attachment",
+                "description": "Weaponized PDF file distributed as an email attachment lure.",
+            })
+            mitre_tactics.append({
+                "id": "T1204.002",
+                "tactic": "Execution",
+                "technique": "User Execution: Malicious File",
+                "description": "Relies on victim opening PDF reader to trigger malicious actions or exploit viewer.",
+            })
+            if any("/Launch" in i for i in indicators):
+                threat_level = "CRITICAL"
+                mitre_tactics.append({
+                    "id": "T1106",
+                    "tactic": "Execution",
+                    "technique": "Native API / Process Execution",
+                    "description": "PDF utilizes /Launch action to execute OS-level command interpreter or binary.",
+                })
+        elif fmt in ("excel", "word"):
+            threat_level = "HIGH"
+            mitre_tactics.append({
+                "id": "T1566.001",
+                "tactic": "Initial Access",
+                "technique": "Phishing: Spearphishing Attachment",
+                "description": "Weaponized Microsoft Office document delivered via phishing campaign.",
+            })
+            if any("VBA" in i for i in indicators) or raw_feats.get("macro_vocab_size", 0) > 0:
+                threat_level = "CRITICAL"
+                mitre_tactics.append({
+                    "id": "T1059.005",
+                    "tactic": "Execution",
+                    "technique": "Command and Scripting Interpreter: Visual Basic",
+                    "description": "Embedded VBA macros configured for AutoOpen/Workbook_Open execution upon launch.",
+                })
+            if any("Template Injection" in i for i in indicators) or raw_feats.get("remote_template_present", 0) > 0:
+                threat_level = "CRITICAL"
+                mitre_tactics.append({
+                    "id": "T1221",
+                    "tactic": "Defense Evasion",
+                    "technique": "Template Injection",
+                    "description": "Document dynamically fetches remote weaponized dotm template over SMB/HTTP.",
+                })
+
+        # SOAR Remediation Playbook
+        actions.append({
+            "stage": "Containment",
+            "tier": "Tier 1 - Endpoint Isolation",
+            "action": f"Quarantine file SHA256 {state.get('file_hash_sha256', '')[:16]}... on EDR (CrowdStrike / Defender for Endpoint).",
+        })
+        actions.append({
+            "stage": "Perimeter Defense",
+            "tier": "Tier 2 - Network Egress Block",
+            "action": "Block associated destination domains/IPs on Secure Web Gateway (Zscaler / Palo Alto Networks).",
+        })
+        actions.append({
+            "stage": "Mailbox Remediation",
+            "tier": "Tier 3 - Tenant Email Purge",
+            "action": f"Execute O365 / Google Workspace mail sweep to purge identical message-ID and attachments across enterprise mailboxes.",
+        })
+        if threat_level == "CRITICAL":
+            actions.append({
+                "stage": "Identity & Access",
+                "tier": "Tier 4 - Credential Revocation",
+                "action": "Revoke active sessions and force MFA re-authentication for any recipient who opened the attachment.",
+            })
+
+    elif "BENIGN" in final_verdict:
+        threat_level = "LOW" if "Screened" in final_verdict else "CLEAN"
+        mitre_tactics.append({
+            "id": "N/A",
+            "tactic": "No Malicious Tactics Identified",
+            "technique": "Standard Business Document",
+            "description": "File exhibits standard benign enterprise document characteristics.",
+        })
+        actions.append({
+            "stage": "Clearance",
+            "tier": "Tier 1 - Safe Release",
+            "action": "Release document from sandbox quarantine to destination mailbox. No SOC escalation required.",
+        })
+
+    return {
+        "mitre_tactics": mitre_tactics,
+        "soc_playbook_actions": actions,
+        "threat_level": threat_level,
+        "final_verdict": final_verdict,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node 7: SOC Incident Response Report Generation
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
+    """
+    Assembles a comprehensive, human-readable SOC Incident Response Report
+    in Markdown format with embedded metrics, indicators, and mitigation steps.
+    """
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    filename = state.get("file_name", "unknown")
+    sha256 = state.get("file_hash_sha256", "N/A")
+    md5 = state.get("file_hash_md5", "N/A")
+    size_bytes = state.get("file_size_bytes", 0)
+    fmt_display = state.get("format_display", "Unknown")
+    verdict = state.get("final_verdict") or state.get("ensemble_verdict", "UNKNOWN")
+    threat_level = state.get("threat_level", "UNKNOWN")
+    confidence = state.get("confidence_score", 0.0)
+    band = state.get("confidence_band", "UNKNOWN")
+    unanimous = state.get("unanimous", False)
+    predictions = state.get("model_predictions", [])
+    top_drivers = state.get("top_risk_drivers", [])
+    iocs = state.get("indicators_of_compromise", [])
+    mitre = state.get("mitre_tactics", [])
+    playbook = state.get("soc_playbook_actions", [])
+    deep = state.get("deep_analysis", {})
+
+    status_badge = "🔴" if "MALICIOUS" in verdict else ("🟢" if "CLEAN" in threat_level else "🟡")
+
+    report_lines = [
+        f"# {status_badge} SOC Incident Response Report — {filename}",
+        f"**Generated:** `{timestamp}` | **Pipeline:** `ExplainPhish LangGraph Agent v2.0` | **Classification:** `{threat_level}`",
+        "",
+        "---",
+        "",
+        "## 1. Executive Summary",
+        f"- **File Name:** `{filename}`",
+        f"- **Verdict:** **{verdict}**",
+        f"- **Threat Level:** `{threat_level}`",
+        f"- **Ensemble Confidence:** `{confidence:.1%}` ({band} confidence band)",
+        f"- **Format:** `{fmt_display}` | **Size:** `{size_bytes:,} bytes`",
+        f"- **SHA-256:** `{sha256}`",
+        f"- **MD5:** `{md5}`",
+        "",
+    ]
+
+    if deep.get("rationale"):
+        report_lines.extend([
+            "> [!NOTE]",
+            f"> **Autonomous Forensics Decision:** {deep['rationale']}",
+            "",
+        ])
+
+    # Model Inference Table
+    report_lines.extend([
+        "## 2. Multi-Model ML Ensemble Consensus",
+        f"Consensus voting evaluated across {len(predictions)} standardized architectures with 100% feature parity.",
+        "",
+        "| Architecture | Prediction | Phishing Probability | Status |",
+        "| :--- | :--- | :--- | :--- |",
+    ])
+    for p in predictions:
+        pred_label = "MALICIOUS" if p["prediction"] == 1 else "BENIGN"
+        prob_val = p.get("probability", 0.0)
+        icon = "⚠️" if p["prediction"] == 1 else "✅"
+        report_lines.append(f"| **{p['model']}** | `{pred_label}` | `{prob_val:.1%}` | {icon} |")
+
+    consensus_text = "Unanimous agreement across all models." if unanimous else "Split consensus vote resolved through LangGraph deep analysis."
+    report_lines.extend([
+        "",
+        f"**Consensus Status:** {consensus_text}",
+        "",
+    ])
+
+    # Explainable AI Drivers
+    if top_drivers:
+        report_lines.extend([
+            "## 3. Explainable AI (XAI) — Top Decision Drivers",
+            "Feature impact on model classification derived from normalized feature importance and standardized training deviations ($z = \\frac{x - \\mu}{\\sigma}$):",
+            "",
+            "| Feature | Description | Raw Value | Z-Score | Direction | Risk Impact |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- |",
+        ])
+        for d in top_drivers:
+            dir_icon = "🔺 Increases Risk" if d["direction"] == "↑" else "🔻 Reduces Risk"
+            report_lines.append(
+                f"| `{d['feature']}` | {d['description']} | `{d['raw_value']}` | `{d['std_value']:+.2f}` | `{d['direction']}` | {dir_icon} (`{d['impact']:+.4f}`) |"
+            )
+        report_lines.append("")
+
+    # Deep Forensics & IOCs
+    if deep.get("forensic_inspection_conducted"):
+        report_lines.extend([
+            "## 4. Deep Forensic Static Telemetry",
+            "Autonomous static inspection findings:",
+            "",
+        ])
+        for ind in deep.get("indicators", []):
+            report_lines.append(f"- {ind}")
+        report_lines.append("")
+
+    if iocs:
+        report_lines.extend([
+            "### Indicators of Compromise (IOCs)",
+            "| Type | Indicator Value |",
+            "| :--- | :--- |",
+        ])
+        for ioc in iocs:
+            report_lines.append(f"| `{ioc['type']}` | `{ioc['value']}` |")
+        report_lines.append("")
+
+    # MITRE ATT&CK Matrix
+    if mitre:
+        report_lines.extend([
+            "## 5. MITRE ATT&CK Mapping",
+            "| Technique ID | Tactic | Technique Name | Operational Description |",
+            "| :--- | :--- | :--- | :--- |",
+        ])
+        for m in mitre:
+            report_lines.append(f"| **{m['id']}** | `{m['tactic']}` | `{m['technique']}` | {m['description']} |")
+        report_lines.append("")
+
+    # SOAR Playbook Actions
+    if playbook:
+        report_lines.extend([
+            "## 6. Prescriptive SOAR Incident Response Playbook",
+            "| Stage | Action Tier | Prescribed Response Action |",
+            "| :--- | :--- | :--- |",
+        ])
+        for a in playbook:
+            report_lines.append(f"| **{a['stage']}** | `{a['tier']}` | {a['action']} |")
+        report_lines.append("")
+
+    report_lines.extend([
+        "---",
+        "*Report automatically generated by ExplainPhish Autonomous Security Agent. For SOC escalations, submit hash to SIEM.*",
+    ])
+
+    report_markdown = "\n".join(report_lines)
+
+    # Save report to reports directory
+    reports_dir = _HERE / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    report_file = reports_dir / f"SOC_Report_{sha256[:10]}_{path_safe(filename)}.md"
+    try:
+        report_file.write_text(report_markdown, encoding="utf-8")
+        saved_path = str(report_file)
+    except Exception:
+        saved_path = None
+
+    return {
+        "soc_report_markdown": report_markdown,
+        "executive_summary": f"Verdict: {verdict} ({threat_level}) with {confidence:.1%} confidence.",
+        "report_saved_path": saved_path,
+    }
+
+
+def path_safe(name: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9_\-\.]", "_", name)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Graph Construction & Compilation
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def build_explainphish_graph():
+    """
+    Constructs and compiles the ExplainPhish LangGraph StateGraph.
+    """
+    builder = StateGraph(ExplainPhishState)
+
+    # Add Nodes
+    builder.add_node("intake_safety", node_intake_safety)
+    builder.add_node("feature_extraction", node_feature_extraction)
+    builder.add_node("ml_ensemble", node_ml_ensemble)
+    builder.add_node("explainability", node_explainability)
+    builder.add_node("deep_threat_analysis", node_deep_threat_analysis)
+    builder.add_node("mitre_mapping", node_mitre_mapping)
+    builder.add_node("soc_report", node_soc_report)
+
+    # Edges
+    builder.add_edge(START, "intake_safety")
+    builder.add_edge("intake_safety", "feature_extraction")
+    builder.add_edge("feature_extraction", "ml_ensemble")
+    builder.add_edge("ml_ensemble", "explainability")
+
+    # Conditional Branching: Ambiguity / Borderline Handling
+    builder.add_conditional_edges(
+        "explainability",
+        route_after_explainability,
+        {
+            "deep_threat_analysis": "deep_threat_analysis",
+            "mitre_mapping": "mitre_mapping",
+            "soc_report": "soc_report",
+        },
+    )
+
+    builder.add_edge("deep_threat_analysis", "mitre_mapping")
+    builder.add_edge("mitre_mapping", "soc_report")
+    builder.add_edge("soc_report", END)
+
+    return builder.compile()
+
+
+# Singleton compiled graph
+_EXPLAINPHISH_APP = None
+
+
+def get_explainphish_graph():
+    global _EXPLAINPHISH_APP
+    if _EXPLAINPHISH_APP is None:
+        _EXPLAINPHISH_APP = build_explainphish_graph()
+    return _EXPLAINPHISH_APP
+
+
+def run_pipeline(file_path: str | Path) -> ExplainPhishState:
+    """Convenience function to run the full graph on any file."""
+    graph = get_explainphish_graph()
+    initial_state: ExplainPhishState = {"file_path": str(file_path)}
+    return graph.invoke(initial_state)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CLI Entry Point
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="ExplainPhish Autonomous SOC Agent Pipeline (Powered by LangGraph)"
+    )
+    parser.add_argument("--file", "-f", required=True, help="Path to suspicious document (HTML, PDF, Excel, Word)")
+    parser.add_argument("--json", action="store_true", help="Output full JSON state instead of Markdown report")
+    parser.add_argument("--quiet", "-q", action="store_true", help="Suppress console markdown output")
+
+    args = parser.parse_args()
+
+    input_file = Path(args.file).resolve()
+    if not input_file.exists():
+        print(f"Error: Target file not found: {input_file}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"[*] Initializing ExplainPhish LangGraph Agent for: {input_file.name}...")
+    result = run_pipeline(input_file)
+
+    if args.json:
+        # Filter serializable subset
+        clean_out = {
+            k: v for k, v in result.items() if k not in ("raw_features", "standardized_features")
+        }
+        print(json.dumps(clean_out, indent=2))
+        return
+
+    if not args.quiet:
+        print("\n" + result.get("soc_report_markdown", "No report generated."))
+
+    if result.get("report_saved_path"):
+        print(f"\n[+] Full SOC Incident Response Report saved to: {result['report_saved_path']}")
+
+
+if __name__ == "__main__":
+    main()

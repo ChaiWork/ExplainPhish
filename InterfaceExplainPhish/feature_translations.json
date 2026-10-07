@@ -1,0 +1,53 @@
+{
+  "word": {
+    "ole_object_count": "Number of embedded OLE (Object Linking and Embedding) components",
+    "ole_object_type_count": "Number of unique OLE object types present in document",
+    "macro_present": "Binary flag indicating whether Visual Basic for Applications (VBA) macros are detected",
+    "dde_present": "Binary flag indicating whether Dynamic Data Exchange (DDE) command execution is present",
+    "vba_keywords_count": "Count of suspicious VBA keywords and API calls (e.g., Shell, AutoOpen, CreateObject)",
+    "entropy": "Overall Shannon file entropy (higher values indicate obfuscation, encryption, or packing)",
+    "struct_ContentType": "Count of unique Content-Type declarations in document package ([Content_Types].xml)",
+    "struct_PartName": "Count of internal archive part names and package relationship entries",
+    "file_size": "Total document file size in bytes",
+    "struct_pos": "Positional structural index of XML elements within the OOXML package"
+  },
+  "excel": {
+    "entropy_of_text": "Shannon entropy of textual cell contents (measure of text randomness or obfuscation)",
+    "macro_chr_count": "Total character count of embedded VBA macro code",
+    "macro_vocab_size": "Number of unique tokens/words used in VBA macro script",
+    "macro_arithmetic_operator_count": "Count of arithmetic operations in macros (frequently used in decryption loops)",
+    "macro_token_count": "Total token count of VBA macro instructions",
+    "macro_max_line_length": "Maximum character length of a single line in macro code (long lines indicate obfuscation)",
+    "remote_template_present": "Binary flag indicating whether remote template injection URLs exist",
+    "numeric_cell_count": "Total count of numeric cells across all worksheets",
+    "string_cell_count": "Total count of text/string cells across all worksheets",
+    "avg_cell_length": "Average character length of string cell contents"
+  },
+  "html": {
+    "url_punct_char_count": "Count of punctuation and special characters in embedded URLs",
+    "tag_count": "Total count of HTML tags in the page DOM",
+    "whitespace_ratio": "Ratio of whitespace characters relative to total document characters",
+    "entropy": "Overall Shannon entropy of HTML source code",
+    "form_count": "Number of interactive input forms (often used in credential harvesting)",
+    "embedded_js_count": "Number of inline or embedded <script> tags",
+    "html_whitespace_ratio": "Proportion of whitespace characters within HTML markup elements",
+    "script_entropy": "Entropy of JavaScript code blocks (high entropy indicates packed/obfuscated JS)",
+    "min_link_length": "Shortest URL length found in hyperlinks",
+    "external_link_count": "Number of links pointing to external foreign domains",
+    "total_script_characters": "Total character length of all JavaScript source code",
+    "internal_link_count": "Number of links referencing internal relative domain paths",
+    "url_digit_count": "Count of numerical digits in hyperlink URLs"
+  },
+  "pdf": {
+    "text_length": "Character count of extractable plain text (malicious dropper PDFs often contain near-zero text)",
+    "total_filters": "Count of stream compression/encoding filters (e.g. /FlateDecode, /ASCIIHexDecode)",
+    "title_chars": "Character length of document title in PDF metadata",
+    "file_size": "Total PDF file size in bytes",
+    "object_count": "Count of indirect PDF objects (obj ... endobj)",
+    "stream_count": "Count of raw data stream objects (stream ... endstream)",
+    "endstream_count": "Count of endstream markers (discrepancy with stream count indicates hidden payloads)",
+    "metadata_size": "Size of metadata stream or dictionary in bytes",
+    "valid_pdf_header": "Binary indicator for valid %PDF-1.x header signature at file start",
+    "entropy_of_streams": "Average Shannon entropy across all compressed stream data"
+  }
+}

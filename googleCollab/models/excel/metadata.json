@@ -1,9 +1,9 @@
 {
   "format": "excel",
   "models": [
+    "xgboost",
     "random_forest",
-    "decision_tree",
-    "logistic_regression"
+    "decision_tree"
   ],
   "n_features": 9,
   "features": [
@@ -18,14 +18,17 @@
     "avg_cell_length"
   ],
   "validation_metrics": {
-    "logistic_regression": {
-      "roc_auc": 0.9984
+    "xgboost": {
+      "roc_auc": 1.0
+    },
+    "random_forest": {
+      "roc_auc": 1.0
     },
     "decision_tree": {
       "roc_auc": 0.9994
     },
-    "random_forest": {
-      "roc_auc": 1.0
+    "logistic_regression": {
+      "roc_auc": 0.9984
     },
     "voting_ensemble": {
       "roc_auc": 1.0

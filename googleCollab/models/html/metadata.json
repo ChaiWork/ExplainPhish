@@ -1,9 +1,9 @@
 {
   "format": "html",
   "models": [
+    "xgboost",
     "random_forest",
-    "decision_tree",
-    "logistic_regression"
+    "decision_tree"
   ],
   "n_features": 13,
   "features": [
@@ -22,17 +22,17 @@
     "html_whitespace_ratio"
   ],
   "validation_metrics": {
-    "logistic_regression": {
-      "roc_auc": 0.8338
+    "xgboost": {
+      "roc_auc": 0.9668
     },
     "random_forest": {
       "roc_auc": 0.9618
     },
     "decision_tree": {
-      "roc_auc": 0.91
+      "roc_auc": 0.9126
     },
     "voting_ensemble": {
-      "roc_auc": 0.9426
+      "roc_auc": 0.9623
     }
   }
 }

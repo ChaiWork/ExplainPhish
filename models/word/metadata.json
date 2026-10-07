@@ -1,9 +1,9 @@
 {
   "format": "word",
   "models": [
+    "xgboost",
     "random_forest",
-    "decision_tree",
-    "logistic_regression"
+    "decision_tree"
   ],
   "n_features": 10,
   "features": [
@@ -19,13 +19,16 @@
     "struct_name"
   ],
   "validation_metrics": {
-    "logistic_regression": {
+    "xgboost": {
+      "roc_auc": 0.9998
+    },
+    "random_forest": {
       "roc_auc": 0.9998
     },
     "decision_tree": {
       "roc_auc": 0.9995
     },
-    "random_forest": {
+    "logistic_regression": {
       "roc_auc": 0.9998
     },
     "voting_ensemble": {

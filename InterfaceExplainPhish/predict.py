@@ -16,7 +16,6 @@ Usage:
     python predict.py --file sample.html
     python predict.py --file sample.xlsx
     python predict.py --file sample.docx
-    python predict.py --file sample.docx --top 5
     python predict.py --dir path/to/folder/
     python predict.py --file sample.pdf --json
 """
@@ -87,22 +86,18 @@ def format_report(res: InferenceResult) -> str:
     drivers = res.get("top_risk_drivers", [])
     if drivers:
         lines.append("")
-        total_std = len(res.get("standardized_features", {}))
-        if total_std and len(drivers) < total_std:
-            header_title = f"Top Decision Drivers ({len(drivers)} of {total_std} Features - Impact & Standardized Z-Score):"
-        else:
-            header_title = f"Top Decision Drivers (All {len(drivers)} Active Features - Impact & Standardized Z-Score):"
-        lines.append(f"  {header_title}")
-        lines.append("  " + "-" * 62)
-        lines.append(f"    {'Feature Name':<28} {'Z-Score':<10} {'Impact'}")
-        lines.append("  " + "-" * 62)
-        for d in drivers:
+        lines.append("  Top Decision Drivers (Explainable Feature Attribution):")
+        lines.append("  " + "-" * 66)
+        for idx, d in enumerate(drivers, 1):
             feat = d.get("feature", "")
+            desc = d.get("description", feat)
             z = d.get("std_value", 0.0)
             imp = d.get("impact", 0.0)
-            desc = "[+] Increases Risk" if imp > 0 else "[-] Reduces Risk"
-            lines.append(f"    {feat:<28} {z:+7.2f}    {imp:+7.3f} ({desc})")
-        lines.append("  " + "-" * 62)
+            raw_v = d.get("raw_value", "N/A")
+            direction = "[+] Increases Risk" if imp > 0 else "[-] Reduces Risk"
+            lines.append(f"    {idx}. {desc}")
+            lines.append(f"       Feature: {feat:<24} | Val: {str(raw_v):<6} | Z: {z:+5.2f} | Impact: {imp:+6.3f} ({direction})")
+        lines.append("  " + "-" * 66)
 
     # Extracted Features
     features = res.get("features", {})
@@ -119,14 +114,9 @@ def format_report(res: InferenceResult) -> str:
     return "\n".join(lines)
 
 
-def process_file(
-    file_path: Path,
-    fmt: str | None = None,
-    as_json: bool = False,
-    top: int | None = None,
-) -> None:
+def process_file(file_path: Path, fmt: str | None = None, as_json: bool = False) -> None:
     try:
-        res = run_inference(file_path, fmt=fmt, n_top=top)
+        res = run_inference(file_path, fmt=fmt)
         if as_json:
             print(json.dumps(res, indent=2), flush=True)
         else:
@@ -144,7 +134,6 @@ def main():
     group.add_argument("--file", "-f", nargs="+", help="Path to single file to analyze")
     group.add_argument("--dir", "-d", nargs="+", help="Directory of files to analyze")
     parser.add_argument("--format", choices=["pdf", "excel", "html", "word"], help="Force specific format")
-    parser.add_argument("--top", "-k", type=int, default=None, help="Number of top decision drivers to display (default: all active features)")
     parser.add_argument("--json", action="store_true", help="Output raw JSON instead of text report")
 
     args = parser.parse_args()
@@ -154,7 +143,7 @@ def main():
         if not file_path.is_file():
             print(f"Error: File not found at {file_path}")
             sys.exit(1)
-        process_file(file_path, fmt=args.format, as_json=args.json, top=args.top)
+        process_file(file_path, fmt=args.format, as_json=args.json)
     elif args.dir:
         dir_path = Path(" ".join(args.dir))
         if not dir_path.is_dir():
@@ -169,7 +158,7 @@ def main():
             valid_files = files  # fallback to magic byte sniffing if extensions differ
         print(f"Found {len(valid_files)} test documents in {dir_path}", flush=True)
         for p in valid_files:
-            process_file(p, fmt=args.format, as_json=args.json, top=args.top)
+            process_file(p, fmt=args.format, as_json=args.json)
 
 
 if __name__ == "__main__":

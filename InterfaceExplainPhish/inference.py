@@ -39,6 +39,16 @@ FORMAT_DISPLAY: Dict[str, str] = {
 }
 
 # In-memory cache for loaded model bundles
+
+_TRANS_FILE = _HERE / "feature_translations.json"
+_FEATURE_TRANSLATIONS: Dict[str, Dict[str, str]] = {}
+if _TRANS_FILE.exists():
+    try:
+        with open(_TRANS_FILE, "r", encoding="utf-8") as f:
+            _FEATURE_TRANSLATIONS = json.load(f)
+    except Exception:
+        pass
+
 _MODEL_CACHE: Dict[str, Dict[str, Any]] = {}
 
 
@@ -59,6 +69,7 @@ class VoteResult(TypedDict):
 
 class FeatureDriver(TypedDict):
     feature: str
+    description: str
     impact: float
     direction: str
     raw_value: Any
@@ -167,7 +178,10 @@ def load_model_bundle(fmt: str) -> Dict[str, Any]:
     # Load artifacts
     rf_model = joblib.load(model_dir / "rf_model.joblib")
     dt_model = joblib.load(model_dir / "dt_model.joblib")
-    lr_model = joblib.load(model_dir / "lr_model.joblib")
+    xgb_path = model_dir / "xgb_model.joblib"
+    lr_path = model_dir / "lr_model.joblib"
+    xgb_model = joblib.load(xgb_path) if xgb_path.exists() else None
+    lr_model = joblib.load(lr_path) if lr_path.exists() else None
     scaler = joblib.load(model_dir / "scaler.joblib")
 
     with open(model_dir / "selected_features.json", "r", encoding="utf-8") as f:
@@ -183,6 +197,7 @@ def load_model_bundle(fmt: str) -> Dict[str, Any]:
         "model_dir": model_dir,
         "rf_model": rf_model,
         "dt_model": dt_model,
+        "xgb_model": xgb_model,
         "lr_model": lr_model,
         "scaler": scaler,
         "selected_features": selected_features,
@@ -240,50 +255,61 @@ def compute_risk_drivers(
     bundle: Dict[str, Any],
     raw_features: Dict[str, Any],
     std_dict: Dict[str, float],
-    n_top: Optional[int] = None,
+    fmt: str = "",
+    n_top: int = 5,
 ) -> List[FeatureDriver]:
     """
-    Compute decision drivers using Logistic Regression coefficients (w_j * z_j).
+    Compute top decision drivers using model coefficients/importances and standardized deviations.
     Positive impact increases phishing probability, negative impact reduces it.
-    If n_top is None or <= 0, returns all active model features sorted by absolute impact.
     """
+    xgb = bundle.get("xgb_model")
     lr = bundle.get("lr_model")
     selected_features = bundle["selected_features"]
-    
-    if lr is None or not hasattr(lr, "coef_"):
-        return []
-
-    coefs = lr.coef_[0]
     drivers = []
 
-    for idx, feat in enumerate(selected_features):
-        z_val = std_dict.get(feat, 0.0)
-        impact = float(coefs[idx] * z_val)
-        direction = "↑" if impact > 0 else "↓"
-        raw_val = raw_features.get(feat, 0)
-        drivers.append({
-            "feature": feat,
-            "impact": round(impact, 4),
-            "direction": direction,
-            "raw_value": raw_val,
-            "std_value": round(z_val, 4),
-        })
+    if xgb is not None and hasattr(xgb, "feature_importances_"):
+        importances = xgb.feature_importances_
+        for idx, feat in enumerate(selected_features):
+            z_val = std_dict.get(feat, 0.0)
+            # Feature impact: importance magnitude scaled by standardized deviation
+            impact = float(importances[idx] * z_val)
+            direction = "↑" if impact > 0 else "↓"
+            raw_val = raw_features.get(feat, 0)
+            desc = _FEATURE_TRANSLATIONS.get(fmt.lower(), {}).get(feat, feat)
+            drivers.append({
+                "feature": feat,
+                "description": desc,
+                "impact": round(impact, 4),
+                "direction": direction,
+                "raw_value": raw_val,
+                "std_value": round(z_val, 4),
+            })
+    elif lr is not None and hasattr(lr, "coef_"):
+        coefs = lr.coef_[0]
+        for idx, feat in enumerate(selected_features):
+            z_val = std_dict.get(feat, 0.0)
+            impact = float(coefs[idx] * z_val)
+            direction = "↑" if impact > 0 else "↓"
+            raw_val = raw_features.get(feat, 0)
+            desc = _FEATURE_TRANSLATIONS.get(fmt.lower(), {}).get(feat, feat)
+            drivers.append({
+                "feature": feat,
+                "description": desc,
+                "impact": round(impact, 4),
+                "direction": direction,
+                "raw_value": raw_val,
+                "std_value": round(z_val, 4),
+            })
 
     # Sort by absolute impact descending
     drivers.sort(key=lambda d: abs(d["impact"]), reverse=True)
-    if n_top is not None and n_top > 0:
-        return drivers[:n_top]
-    return drivers
+    return drivers[:n_top]
 
 
-def run_inference(
-    file_path: str | Path,
-    fmt: str | None = None,
-    n_top: Optional[int] = None,
-) -> InferenceResult:
+def run_inference(file_path: str | Path, fmt: str | None = None) -> InferenceResult:
     """
     Main inference entrypoint: extracts features, standardizes them,
-    queries all three models, and evaluates voting consensus.
+    queries all models, and evaluates voting consensus.
     """
     path = Path(file_path).resolve()
     if not path.is_file():
@@ -299,7 +325,8 @@ def run_inference(
     scaler = bundle["scaler"]
     rf = bundle["rf_model"]
     dt = bundle["dt_model"]
-    lr = bundle["lr_model"]
+    xgb = bundle.get("xgb_model")
+    lr = bundle.get("lr_model")
 
     # 2. Extract raw features
     raw_features = extract_features(path, fmt)
@@ -310,18 +337,26 @@ def run_inference(
     # 4. Multi-model predictions
     prob_rf = float(rf.predict_proba(sample_std)[0, 1])
     prob_dt = float(dt.predict_proba(sample_std)[0, 1])
-    prob_lr = float(lr.predict_proba(sample_std)[0, 1])
 
     predictions: List[ModelPrediction] = [
         {"model": "Random Forest", "prediction": int(prob_rf >= 0.5), "probability_malicious": round(prob_rf, 4)},
         {"model": "Decision Tree", "prediction": int(prob_dt >= 0.5), "probability_malicious": round(prob_dt, 4)},
-        {"model": "Logistic Regression", "prediction": int(prob_lr >= 0.5), "probability_malicious": round(prob_lr, 4)},
     ]
+    all_probs = [prob_rf, prob_dt]
+
+    if xgb is not None:
+        prob_xgb = float(xgb.predict_proba(sample_std)[0, 1])
+        predictions.append({"model": "XGBoost", "prediction": int(prob_xgb >= 0.5), "probability_malicious": round(prob_xgb, 4)})
+        all_probs.append(prob_xgb)
+    elif lr is not None:
+        prob_lr = float(lr.predict_proba(sample_std)[0, 1])
+        predictions.append({"model": "Logistic Regression", "prediction": int(prob_lr >= 0.5), "probability_malicious": round(prob_lr, 4)})
+        all_probs.append(prob_lr)
 
     # 5. Consensus voting
     malicious_votes = sum([p["prediction"] for p in predictions])
     benign_votes = len(predictions) - malicious_votes
-    mean_prob = (prob_rf + prob_dt + prob_lr) / 3.0
+    mean_prob = sum(all_probs) / float(len(all_probs))
 
     verdict = "MALICIOUS" if malicious_votes >= 2 else "BENIGN"
     confidence = mean_prob if verdict == "MALICIOUS" else (1.0 - mean_prob)
@@ -338,7 +373,7 @@ def run_inference(
     }
 
     # 6. Explainability drivers
-    top_drivers = compute_risk_drivers(bundle, raw_features, std_dict, n_top=n_top)
+    top_drivers = compute_risk_drivers(bundle, raw_features, std_dict, fmt=fmt, n_top=5)
 
     return {
         "file_name": path.name,

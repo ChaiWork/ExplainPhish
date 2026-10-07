@@ -90,25 +90,53 @@ def extract(file_path: str | Path) -> dict:
     stream_data = b"".join(re.findall(rb"stream\r?\n(.*?)endstream", raw, re.DOTALL))
     feat["entropy_of_streams"] = round(_entropy(stream_data), 6)
 
-    # ── 6. Text length (pdfminer) ──────────────────────────────────────────────
+    # ── 6. Text length (pdfminer with PyPDF2 fallback) ────────────────────────
+    text = ""
     try:
         from pdfminer.high_level import extract_text as _extract_text
         text = _extract_text(str(path)) or ""
-        feat["text_length"] = len(text)
     except Exception:
-        feat["text_length"] = 0
+        pass
+    if not text:
+        try:
+            import PyPDF2
+            with open(str(path), "rb") as f:
+                reader = PyPDF2.PdfReader(f, strict=False)
+                for p in reader.pages[:50]:
+                    t = p.extract_text()
+                    if t:
+                        text += t
+        except Exception:
+            pass
+    feat["text_length"] = len(text)
 
-    # ── 7. Metadata size + title chars (PyMuPDF) ──────────────────────────────
+    # ── 7. Metadata size + title chars (PyMuPDF with PyPDF2 fallback) ─────────
+    meta_size = 0
+    title_len = 0
     try:
         import fitz  # PyMuPDF
         doc = fitz.open(str(path))
         meta = doc.metadata or {}
         meta_str = " ".join(str(v) for v in meta.values() if v)
-        feat["metadata_size"] = len(meta_str.encode("utf-8", errors="ignore"))
-        feat["title_chars"]   = len(str(meta.get("title", "") or ""))
+        meta_size = len(meta_str.encode("utf-8", errors="ignore"))
+        title_len = len(str(meta.get("title", "") or ""))
         doc.close()
     except Exception:
-        feat["metadata_size"] = 0
-        feat["title_chars"]   = 0
+        pass
+    if not meta_size and not title_len:
+        try:
+            import PyPDF2
+            with open(str(path), "rb") as f:
+                reader = PyPDF2.PdfReader(f, strict=False)
+                meta = reader.metadata
+                if meta:
+                    meta_str = str(meta)
+                    meta_size = len(meta_str.encode("utf-8", errors="ignore"))
+                    title = meta.get("/Title") or ""
+                    title_len = len(str(title))
+        except Exception:
+            pass
+    feat["metadata_size"] = meta_size
+    feat["title_chars"]   = title_len
 
     return validate_output(feat, REQUIRED_KEYS, "pdf")

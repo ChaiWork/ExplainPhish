@@ -23,3 +23,8 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Colab nested run artifacts
+googleCollab/InterfaceExplainPhish/
+googleCollab/googleCollab/
+googleCollab/output/
