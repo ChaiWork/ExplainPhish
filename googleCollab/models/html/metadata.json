@@ -3,8 +3,10 @@
   "models": [
     "random_forest",
     "decision_tree",
-    "logistic_regression",
-    "neural_network_mlp"
+    "neural_network_mlp",
+    "xgboost",
+    "lightgbm",
+    "logistic_regression"
   ],
   "n_features": 13,
   "features": [
