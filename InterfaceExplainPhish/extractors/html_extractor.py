@@ -51,8 +51,13 @@ def _entropy(text: str) -> float:
 def _is_external(href: str) -> bool:
     if not href:
         return False
-    parsed = urlparse(href)
-    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+    try:
+        parsed = urlparse(href)
+        return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+    except Exception:
+        # Graceful fallback for malformed URLs (e.g., unmatched brackets raising "Invalid IPv6 URL")
+        href_lower = href.strip().lower()
+        return href_lower.startswith(("http://", "https://", "//"))
 
 
 def extract(file_path: str | Path) -> dict:

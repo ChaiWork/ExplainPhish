@@ -1,11 +1,18 @@
 """
 InterfaceExplainPhish Core Inference Engine
 ============================================
-Implements the 3-step standardized inference & multimodal consensus voting pipeline:
+Implements the standardized inference & multi-model consensus voting pipeline:
   1. Raw Feature Extraction (using format-specific extractors)
   2. StandardScaler Transformation (z = (x - mu_train) / sigma_train)
-  3. Multi-Model Inferences (Random Forest, Decision Tree, Logistic Regression)
-  4. Consensus Voting (Hard Majority Vote + Soft Probability Averaging + Risk Drivers)
+  3. Multi-Model Inferences across all supported architectures:
+       - Random Forest
+       - Decision Tree
+       - Neural Network (Multi-Layer Perceptron / MLP)
+       - XGBoost (Extreme Gradient Boosting)
+       - LightGBM (Light Gradient Boosting Machine)
+       - Logistic Regression (Linear Baseline & Attribution)
+  4. Consensus Voting (Majority Vote + Soft Probability Averaging + Risk Drivers)
+     or Target Single-Model Prediction when requested.
 """
 from __future__ import annotations
 
@@ -38,6 +45,26 @@ FORMAT_DISPLAY: Dict[str, str] = {
     "word": "Word Document",
 }
 
+MODEL_ALIASES: Dict[str, str] = {
+    "rf": "Random Forest",
+    "random forest": "Random Forest",
+    "random_forest": "Random Forest",
+    "dt": "Decision Tree",
+    "decision tree": "Decision Tree",
+    "decision_tree": "Decision Tree",
+    "nn": "Neural Network",
+    "mlp": "Neural Network",
+    "neural network": "Neural Network",
+    "neural_network": "Neural Network",
+    "xgb": "XGBoost",
+    "xgboost": "XGBoost",
+    "lgb": "LightGBM",
+    "lightgbm": "LightGBM",
+    "lr": "Logistic Regression",
+    "logistic regression": "Logistic Regression",
+    "logistic_regression": "Logistic Regression",
+}
+
 # In-memory cache for loaded model bundles
 _MODEL_CACHE: Dict[str, Dict[str, Any]] = {}
 
@@ -55,6 +82,7 @@ class VoteResult(TypedDict):
     vote_counts: Dict[str, int]
     mean_probability: float
     uncertain: bool
+    target_model: Optional[str]
 
 
 class FeatureDriver(TypedDict):
@@ -142,6 +170,13 @@ def load_model_bundle(fmt: str) -> Dict[str, Any]:
     """
     Load models, scaler, feature list, and metadata for a format.
     Checks InterfaceExplainPhish/models/<fmt> first, then ../models/<fmt>.
+    Dynamically loads all trained models present:
+      - Random Forest (rf_model.joblib)
+      - Decision Tree (dt_model.joblib)
+      - Neural Network / MLP (mlp_model.joblib)
+      - XGBoost (xgb_model.joblib)
+      - LightGBM (lgb_model.joblib)
+      - Logistic Regression (lr_model.joblib)
     """
     if fmt in _MODEL_CACHE:
         return _MODEL_CACHE[fmt]
@@ -164,11 +199,24 @@ def load_model_bundle(fmt: str) -> Dict[str, Any]:
             f"Checked: {[str(c) for c in candidates]}"
         )
 
-    # Load artifacts
+    # Load core artifacts
     rf_model = joblib.load(model_dir / "rf_model.joblib")
     dt_model = joblib.load(model_dir / "dt_model.joblib")
     lr_model = joblib.load(model_dir / "lr_model.joblib")
     scaler = joblib.load(model_dir / "scaler.joblib")
+
+    # Load advanced / format-specific models if available
+    mlp_model = None
+    if (model_dir / "mlp_model.joblib").exists():
+        mlp_model = joblib.load(model_dir / "mlp_model.joblib")
+
+    xgb_model = None
+    if (model_dir / "xgb_model.joblib").exists():
+        xgb_model = joblib.load(model_dir / "xgb_model.joblib")
+
+    lgb_model = None
+    if (model_dir / "lgb_model.joblib").exists():
+        lgb_model = joblib.load(model_dir / "lgb_model.joblib")
 
     with open(model_dir / "selected_features.json", "r", encoding="utf-8") as f:
         selected_features = json.load(f)
@@ -184,6 +232,9 @@ def load_model_bundle(fmt: str) -> Dict[str, Any]:
         "rf_model": rf_model,
         "dt_model": dt_model,
         "lr_model": lr_model,
+        "mlp_model": mlp_model,
+        "xgb_model": xgb_model,
+        "lgb_model": lgb_model,
         "scaler": scaler,
         "selected_features": selected_features,
         "metadata": meta,
@@ -280,10 +331,13 @@ def run_inference(
     file_path: str | Path,
     fmt: str | None = None,
     n_top: Optional[int] = None,
+    target_model: Optional[str] = None,
 ) -> InferenceResult:
     """
     Main inference entrypoint: extracts features, standardizes them,
-    queries all three models, and evaluates voting consensus.
+    queries all implemented models (Random Forest, Decision Tree, Neural Network,
+    XGBoost, LightGBM, Logistic Regression), and evaluates voting consensus or
+    specific single-model prediction.
     """
     path = Path(file_path).resolve()
     if not path.is_file():
@@ -297,9 +351,6 @@ def run_inference(
     bundle = load_model_bundle(fmt)
     selected_features = bundle["selected_features"]
     scaler = bundle["scaler"]
-    rf = bundle["rf_model"]
-    dt = bundle["dt_model"]
-    lr = bundle["lr_model"]
 
     # 2. Extract raw features
     raw_features = extract_features(path, fmt)
@@ -307,35 +358,84 @@ def run_inference(
     # 3. Standardize features
     sample_std, std_dict = standardize_features(raw_features, selected_features, scaler)
 
-    # 4. Multi-model predictions
-    prob_rf = float(rf.predict_proba(sample_std)[0, 1])
-    prob_dt = float(dt.predict_proba(sample_std)[0, 1])
-    prob_lr = float(lr.predict_proba(sample_std)[0, 1])
-
-    predictions: List[ModelPrediction] = [
-        {"model": "Random Forest", "prediction": int(prob_rf >= 0.5), "probability_malicious": round(prob_rf, 4)},
-        {"model": "Decision Tree", "prediction": int(prob_dt >= 0.5), "probability_malicious": round(prob_dt, 4)},
-        {"model": "Logistic Regression", "prediction": int(prob_lr >= 0.5), "probability_malicious": round(prob_lr, 4)},
+    # 4. Multi-model predictions across all available architectures
+    model_registry: List[Tuple[str, Any]] = [
+        ("Random Forest", bundle.get("rf_model")),
+        ("Decision Tree", bundle.get("dt_model")),
+        ("Neural Network", bundle.get("mlp_model")),
+        ("XGBoost", bundle.get("xgb_model")),
+        ("LightGBM", bundle.get("lgb_model")),
+        ("Logistic Regression", bundle.get("lr_model")),
     ]
 
-    # 5. Consensus voting
-    malicious_votes = sum([p["prediction"] for p in predictions])
-    benign_votes = len(predictions) - malicious_votes
-    mean_prob = (prob_rf + prob_dt + prob_lr) / 3.0
+    predictions: List[ModelPrediction] = []
+    for model_name, model_obj in model_registry:
+        if model_obj is not None:
+            prob = float(model_obj.predict_proba(sample_std)[0, 1])
+            pred = int(prob >= 0.5)
+            predictions.append({
+                "model": model_name,
+                "prediction": pred,
+                "probability_malicious": round(prob, 4),
+            })
 
-    verdict = "MALICIOUS" if malicious_votes >= 2 else "BENIGN"
-    confidence = mean_prob if verdict == "MALICIOUS" else (1.0 - mean_prob)
-    band = "HIGH" if confidence >= 0.85 else ("MEDIUM" if confidence >= 0.65 else "LOW")
-    uncertain = (malicious_votes in (1, 2))
+    # Resolve target model filter if specified
+    normalized_target: Optional[str] = None
+    if target_model and target_model.strip().lower() not in ("all", "ensemble", "consensus"):
+        key = target_model.strip().lower()
+        normalized_target = MODEL_ALIASES.get(key, target_model.strip())
+        matched = [p for p in predictions if p["model"].lower() == normalized_target.lower()]
+        if not matched:
+            available_names = [p["model"] for p in predictions]
+            raise ValueError(
+                f"Model '{target_model}' not available for format '{fmt}'. "
+                f"Available models: {available_names}"
+            )
+        # Match exact casing from predictions
+        normalized_target = matched[0]["model"]
 
-    vote: VoteResult = {
-        "verdict": verdict,
-        "confidence": round(confidence, 4),
-        "confidence_band": band,
-        "vote_counts": {"malicious": malicious_votes, "benign": benign_votes},
-        "mean_probability": round(mean_prob, 4),
-        "uncertain": uncertain,
-    }
+    # 5. Consensus or Target Model Decision
+    if normalized_target:
+        target_pred = next(p for p in predictions if p["model"] == normalized_target)
+        prob_target = target_pred["probability_malicious"]
+        verdict = "MALICIOUS" if target_pred["prediction"] == 1 else "BENIGN"
+        confidence = prob_target if verdict == "MALICIOUS" else (1.0 - prob_target)
+        band = "HIGH" if confidence >= 0.85 else ("MEDIUM" if confidence >= 0.65 else "LOW")
+
+        vote: VoteResult = {
+            "verdict": verdict,
+            "confidence": round(confidence, 4),
+            "confidence_band": band,
+            "vote_counts": {"malicious": target_pred["prediction"], "benign": 1 - target_pred["prediction"]},
+            "mean_probability": round(prob_target, 4),
+            "uncertain": False,
+            "target_model": normalized_target,
+        }
+    else:
+        # Multimodal consensus voting across primary non-linear detectors
+        primary_voting_names = ["Random Forest", "Decision Tree", "Neural Network", "XGBoost", "LightGBM"]
+        voting_candidates = [p for p in predictions if p["model"] in primary_voting_names]
+        if not voting_candidates:
+            voting_candidates = predictions
+
+        malicious_votes = sum([p["prediction"] for p in voting_candidates])
+        benign_votes = len(voting_candidates) - malicious_votes
+        mean_prob = float(np.mean([p["probability_malicious"] for p in voting_candidates]))
+
+        verdict = "MALICIOUS" if malicious_votes > (len(voting_candidates) / 2.0) else "BENIGN"
+        confidence = mean_prob if verdict == "MALICIOUS" else (1.0 - mean_prob)
+        band = "HIGH" if confidence >= 0.85 else ("MEDIUM" if confidence >= 0.65 else "LOW")
+        uncertain = (malicious_votes != len(voting_candidates) and malicious_votes != 0)
+
+        vote: VoteResult = {
+            "verdict": verdict,
+            "confidence": round(confidence, 4),
+            "confidence_band": band,
+            "vote_counts": {"malicious": malicious_votes, "benign": benign_votes},
+            "mean_probability": round(mean_prob, 4),
+            "uncertain": uncertain,
+            "target_model": "Ensemble (Consensus)",
+        }
 
     # 6. Explainability drivers
     top_drivers = compute_risk_drivers(bundle, raw_features, std_dict, n_top=n_top)

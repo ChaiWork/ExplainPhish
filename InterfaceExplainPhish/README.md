@@ -26,8 +26,14 @@ ExplainPhish provides static analysis, feature extraction, standard scaling, and
 ### Standardized Inference Pipeline
 1. **Feature Extraction**: Static parsing without dynamic execution (file size limit: 50MB, zip bomb protection).
 2. **StandardScaler Alignment**: Raw feature values are transformed using the fitted scaler from training ($z = \frac{x - \mu}{\sigma}$), preventing scale explosion and ensuring zero training-serving skew.
-3. **Multi-Model Inferences**: Evaluated simultaneously by **Random Forest**, **Decision Tree**, and **Logistic Regression**.
-4. **Consensus Voting**: Hard majority vote ($\ge 2/3$) decides the verdict (`MALICIOUS` vs `BENIGN`), complemented by soft probability averaging, confidence bands (`HIGH`, `MEDIUM`, `LOW`), and directional risk drivers ($w_j \times z_j$).
+3. **Multi-Model Inferences**: Evaluated by 5 distinct machine learning architectures:
+   - **Random Forest** (Primary Bagged Ensemble)
+   - **Decision Tree** (Interpretable Hierarchical Rules)
+   - **Neural Network / MLP** (Non-linear Dense Feedforward Network)
+   - **XGBoost** (Extreme Gradient Boosting)
+   - **LightGBM** (Light Gradient Boosting Machine)
+   *(Plus Logistic Regression companion for linear risk attribution)*
+4. **Consensus Voting or Single-Model Prediction**: Evaluates majority consensus across all 5 models or predicts using a specific user-selected model via `--model`.
 
 ## Running Inference & Voting (predict.py)
 
@@ -36,11 +42,18 @@ Analyze single files or entire directories:
 ```powershell
 cd D:\codingProject\ExplainPhish\InterfaceExplainPhish
 
-# Predict single file (automatic format detection & magic byte sniffing)
-python predict.py --file "Sample\pbenign_pdf\i1040nre.pdf"
-python predict.py --file "Sample\pmalicios_pdf\sample_07602.pdf"
+# 1. Multimodal Ensemble Consensus (evaluates across all 5 models):
 python predict.py --file "Sample\hMalicious_HTML\sample_00195.html"
-python predict.py --file "Sample\eBenign_Excel\benign_sample_1244.xlsx"
+python predict.py --file "Sample\hBenign_HTML\sample_00698.html"
+
+# 2. Predict using a specific model:
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html" --model "Decision Tree"
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html" --model "Neural Network"
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html" --model "Random Forest"
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html" --model "XGBoost"
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html" --model "LightGBM"
+
+# Shortcuts: --model dt, --model nn, --model rf, --model xgb, --model lgb
 
 # Predict directory of files (recursively discovers test documents)
 python predict.py --dir "Sample"
