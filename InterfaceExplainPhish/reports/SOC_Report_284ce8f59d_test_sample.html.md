@@ -1,5 +1,5 @@
 # 🔴 SOC Incident Response Report — test_sample.html
-**Generated:** `2026-10-05 19:46:40 UTC` | **Pipeline:** `ExplainPhish LangGraph Agent v2.0` | **Classification:** `HIGH`
+**Generated:** `2026-10-07 20:59:47 UTC` | **Pipeline:** `ExplainPhish LangGraph Agent v2.0` | **Classification:** `HIGH`
 
 ---
 
