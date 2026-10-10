@@ -1,9 +1,11 @@
 {
   "format": "word",
   "models": [
-    "xgboost",
     "random_forest",
-    "decision_tree"
+    "decision_tree",
+    "neural_network_mlp",
+    "xgboost",
+    "lightgbm"
   ],
   "n_features": 10,
   "features": [
@@ -18,21 +20,16 @@
     "path_/a-accent6",
     "struct_name"
   ],
-  "validation_metrics": {
-    "xgboost": {
-      "roc_auc": 0.9998
-    },
-    "random_forest": {
-      "roc_auc": 0.9998
-    },
-    "decision_tree": {
-      "roc_auc": 0.9995
-    },
-    "logistic_regression": {
-      "roc_auc": 0.9998
-    },
-    "voting_ensemble": {
-      "roc_auc": 0.9998
-    }
+  "best_rf_params": {
+    "n_estimators": 150,
+    "min_samples_split": 10,
+    "min_samples_leaf": 2,
+    "max_features": 0.5,
+    "max_depth": 8
+  },
+  "test_metrics": {
+    "roc_auc": 0.9997,
+    "accuracy": 0.9996,
+    "f1": 0.9996
   }
 }

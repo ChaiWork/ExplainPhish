@@ -1,9 +1,11 @@
 {
   "format": "pdf",
   "models": [
-    "xgboost",
     "random_forest",
-    "decision_tree"
+    "decision_tree",
+    "neural_network_mlp",
+    "xgboost",
+    "lightgbm"
   ],
   "n_features": 10,
   "features": [
@@ -18,21 +20,16 @@
     "endstream_count",
     "valid_pdf_header"
   ],
-  "validation_metrics": {
-    "xgboost": {
-      "roc_auc": 1.0
-    },
-    "random_forest": {
-      "roc_auc": 0.9996
-    },
-    "decision_tree": {
-      "roc_auc": 0.9971
-    },
-    "logistic_regression": {
-      "roc_auc": 0.9767
-    },
-    "voting_ensemble": {
-      "roc_auc": 0.9999
-    }
+  "best_rf_params": {
+    "n_estimators": 200,
+    "min_samples_split": 5,
+    "min_samples_leaf": 2,
+    "max_features": "log2",
+    "max_depth": null
+  },
+  "test_metrics": {
+    "roc_auc": 0.9993,
+    "accuracy": 0.9959,
+    "f1": 0.996
   }
 }

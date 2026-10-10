@@ -26,9 +26,13 @@ ExplainPhish provides static analysis, feature extraction, standard scaling, and
 ### Standardized Inference Pipeline
 1. **Feature Extraction**: Static parsing without dynamic execution (file size limit: 50MB, zip bomb protection).
 2. **StandardScaler Alignment**: Raw feature values are transformed using the fitted scaler from training ($z = \frac{x - \mu}{\sigma}$), preventing scale explosion and ensuring zero training-serving skew.
-3. **Multi-Model Inferences**: Evaluated simultaneously by **Random Forest**, **Decision Tree**, and **XGBoost** (replacing legacy Logistic Regression for high-precision gradient-boosted detection).
-4. **Consensus Voting**: Hard majority vote ($\ge 2/3$) decides the verdict (`MALICIOUS` vs `BENIGN`), complemented by soft probability averaging, confidence bands (`HIGH`, `MEDIUM`, `LOW`), and directional risk drivers ($w_j \times z_j$).
-5. **LangGraph Autonomous SOC Agent**: Multi-stage state graph with intake safety, ML ensemble, explainable attribution, conditional borderline routing, deep static threat forensics, MITRE ATT&CK technique mapping, and automated SOAR remediation report generation.
+3. **Multi-Model Inferences**: Evaluated by 5 distinct machine learning architectures:
+   - **Random Forest** (Primary Bagged Ensemble)
+   - **Decision Tree** (Interpretable Hierarchical Rules)
+   - **Neural Network / MLP** (Non-linear Dense Feedforward Network)
+   - **XGBoost** (Extreme Gradient Boosting)
+   - **LightGBM** (Light Gradient Boosting Machine)
+4. **Consensus Voting or Single-Model Prediction**: Evaluates majority consensus across all 5 models or predicts using a specific user-selected model via `--model`.
 
 ## Running Inference & Voting (predict.py)
 
@@ -37,11 +41,18 @@ Analyze single files or entire directories:
 ```powershell
 cd D:\codingProject\ExplainPhish\InterfaceExplainPhish
 
-# Predict single file (automatic format detection & magic byte sniffing)
-python predict.py --file "Sample\pbenign_pdf\i1040nre.pdf"
-python predict.py --file "Sample\pmalicios_pdf\sample_07602.pdf"
+# 1. Multimodal Ensemble Consensus (evaluates across all 5 models):
 python predict.py --file "Sample\hMalicious_HTML\sample_00195.html"
-python predict.py --file "Sample\eBenign_Excel\benign_sample_1244.xlsx"
+python predict.py --file "Sample\hBenign_HTML\sample_00698.html"
+
+# 2. Predict using a specific model:
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html" --model "Decision Tree"
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html" --model "Neural Network"
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html" --model "Random Forest"
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html" --model "XGBoost"
+python predict.py --file "Sample\hMalicious_HTML\sample_00195.html" --model "LightGBM"
+
+# Shortcuts: --model dt, --model nn, --model rf, --model xgb, --model lgb
 
 # Predict directory of files (recursively discovers test documents)
 python predict.py --dir "Sample"
@@ -55,7 +66,7 @@ python predict.py --file "Sample\pbenign_pdf\i1040nre.pdf" --json
 - **Detected Format**: Suffix and magic signature detection
 - **Extracted Features**: Real-time static document parsing
 - **Standardized Z-Scores**: Calibrated deviations from the training baseline
-- **Individual Models**: Predictions and malicious probabilities from Random Forest, Decision Tree, and XGBoost
+- **Individual Models**: Predictions and malicious probabilities from the 5 voting models (Random Forest, Decision Tree, Neural Network, XGBoost, and LightGBM)
 - **Consensus Voting**: Majority vote verdict (`MALICIOUS` / `BENIGN`), confidence score, confidence band (`HIGH` / `MEDIUM` / `LOW`), and agreement status
 - **Top Decision Drivers**: Top features driving the prediction with their directionality (`[+] Increases Risk` vs `[-] Reduces Risk`) and standardized impact score
 
@@ -72,7 +83,7 @@ python predict.py --file "Sample\pbenign_pdf\i1040nre.pdf" --json
   [Feature Extraction]
             │
             ▼
-  [ML Ensemble: XGBoost + RF + DT]
+  [ML Ensemble: 5 Models Consensus]
             │
             ▼
   [Explainability & Risk Drivers]
@@ -95,7 +106,7 @@ python predict.py --file "Sample\pbenign_pdf\i1040nre.pdf" --json
 
 ### Key Capabilities:
 1. **Intake & Anti-Evasion**: File size limits (<50MB), anti-ZIP bomb ratio checks, cryptographic hashing (SHA-256 + MD5).
-2. **Standardized ML Voting**: Multi-model inference combining Random Forest, Decision Tree, and XGBoost.
+2. **Standardized ML Voting**: Multi-model inference across Random Forest, Decision Tree, Neural Network, XGBoost, and LightGBM.
 3. **Autonomous Conditional Escalation**: Detects borderline uncertainty (e.g. split votes, probability ambiguity, or Office documents without macros flagged as malicious). Routes automatically to **Deep Threat Forensics**.
 4. **Deep Threat Forensics**: Static inspection for obfuscated JavaScript, credential input forms, PDF `/Launch` and `/JavaScript` triggers, VBA archive streams, remote template injection, and DDE formulas. Screens false positives and upgrades evasive payloads.
 5. **MITRE ATT&CK Alignment**: Automatically identifies technique IDs (e.g., T1566.001, T1566.002, T1059.005, T1059.007, T1056.001, T1204.002, T1221).

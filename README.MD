@@ -339,3 +339,287 @@ If you fit on the test data or before splitting, information about the test dist
 | **Gradient Convergence** | Gradient descent bounces erratically in elongated loss canyons, taking much longer to converge or failing. |
 | **Fair Regularization** | $L_2$ weight penalties unfairly penalize small-unit features, destroying their predictive power. |
 | **Unified Ensemble Pipeline** | Allows Linear Models and Tree Models to consume the exact same preprocessed feature vector seamlessly. |
+
+
+
+
+Empirical Prediction Verification & Notebook Curriculum Enhancement Report
+Data Science Investigation & Benchmark Verification
+Role: Senior Data Scientist & Cybersecurity Machine Learning Researcher (/data-scientist skill)
+Target Modalities: PDF, Word, HTML, Excel
+Primary Artifacts:
+
+
+
+explainPhishExcel.ipynb
+
+
+explainPhishHTML.ipynb
+
+
+explainPhishPDF.ipynb
+
+
+explainPhishWord.ipynb
+Model Engine: 
+
+inference.py
+ & 
+
+predict.py
+1. Executive Summary & Verification of Real Data
+To guarantee zero hallucination, all predictions and data statistics were empirically executed and extracted directly from your local filesystem using your trained models and actual benchmark datasets:
+
+Benchmark Datasets Verified (Located in 
+
+googleCollab/data/
+):
+
+Excel (
+
+Excel_Top10_Features.csv
+): 20,000 samples (10,000 Phishing / 10,000 Benign, 50.0% / 50.0% balance), 9 active features.
+HTML (
+
+HTML_Top13_Features.csv
+): 19,997 samples (9,999 Phishing / 9,998 Benign, 50.0% / 50.0% balance), 13 active features.
+PDF (
+
+PDF_Top10_features.csv
+): 19,296 samples (9,999 Phishing / 9,297 Benign, 51.8% / 48.2% balance), 10 active features.
+Word (
+
+Word_All_features.csv
+): 20,000 samples (10,000 Phishing / 10,000 Benign, 50.0% / 50.0% balance), 10 selected features.
+Empirical Verification on Real Test Files (Located in 
+
+InterfaceExplainPhish/Sample/
+):
+
+We executed full end-to-end inference across all 35 real files spanning benign and malicious categories for all 4 formats.
+Overall Real-World Accuracy: 94.29% (33 / 35 correct)
+Recall (Malicious Detection Rate): 90.91% (10 / 11 malicious detected)
+Specificity (Benign Clean Rate): 95.83% (23 / 24 benign correctly cleared)
+2. Machine Learning Pipeline: How the Model Learns & Predicts
+mermaid
+graph TD
+    A[Raw Suspicious Document PDF / Word / HTML / Excel] --> B[Static Feature Extractor]
+    B -->|Defensive Imputation| C[Schema Validation & Missing Value Handling]
+    C --> D[StandardScaler Transformation: z = x - mu / sigma]
+    D --> E[Neural Network Winsorization: Clip z to -3, 3]
+    D --> F[5 Voting Models Inference]
+    E --> F
+    subgraph M[5 Trained Machine Learning Models]
+        F1[Random Forest]
+        F2[Decision Tree]
+        F3[Neural Network MLP]
+        F4[XGBoost]
+        F5[LightGBM]
+    end
+    F --> M
+    M --> G[Ensemble Majority Voting Consensus]
+    G --> H{Executable Vectors Detected?}
+    H -->|0 Macros / 0 OLE / 0 DDE| I[Structural Safety Layer Override to BENIGN]
+    H -->|Threat Confirmed| J[MALICIOUS Verdict]
+    G --> K[SHAP TreeExplainer Risk Drivers]
+Preprocessing & Machine Learning Steps Explained Simply:
+Static Feature Extraction: Safe parsing without execution. No macros are executed, no URLs are opened, and no PDFs are rendered.
+StandardScaler Normalization: $$\Large z = \frac{x - \mu}{\sigma}$$ Features have drastically different scales (e.g., file size can be 2,000,000 bytes, while entropy is between 0.0 and 8.0). Scaling centers all features to a mean of $0$ and standard deviation of $1$.
+MLP Winsorization: Neural Networks can produce volatile predictions when fed extreme outlier z-scores (e.g., $z > 20$). In 
+
+inference.py
+, input z-scores for the Neural Network are clamped to $[-3.0, 3.0]$.
+5-Model Consensus Voting: Every document is evaluated by 5 diverse algorithms (Random Forest, Decision Tree, Neural Network, XGBoost, LightGBM). An ensemble verdict is reached by majority vote.
+Structural Threat Verification Layer: If synthetic dataset artifacts cause ML models to flag a clean document, the structural safety layer verifies the document package: if it contains zero macros (vbaProject.bin), zero OLE binary objects, zero external template relationships, and zero DDE commands, it is safely verified as BENIGN.
+3. Empirical Test Results: Real Prediction Verification (35 Files)
+A. Performance Metrics Across Real Test Samples
+Metric	Real Empirical Value	Formula / Description
+Total Test Samples	35 documents	All real sample files across 8 folders
+True Positives (TP)	10	Malicious files correctly flagged as MALICIOUS
+True Negatives (TN)	23	Benign files correctly cleared as BENIGN
+False Positives (FP)	1	Benign files misclassified (693755.pdf)
+False Negatives (FN)	1	Malicious files missed (sample_00574.html)
+Empirical Accuracy	94.29%	$\frac{TP + TN}{Total} = \frac{33}{35}$
+Precision	90.91%	$\frac{TP}{TP + FP} = \frac{10}{11}$
+Recall / Sensitivity	90.91%	$\frac{TP}{TP + FN} = \frac{10}{11}$
+F1-Score	90.91%	$2 \times \frac{Precision \times Recall}{Precision + Recall}$
+B. Complete Per-Sample Prediction Breakdown Table
+1. Excel Spreadsheets (8 Files Tested — 100.0% Accuracy)
+File Name	Ground Truth	Final Verdict	Confidence	Voting Tally (Mal / Ben)	Individual Model Votes (RF, DT, NN, XGB, LGB)	Notes / Safety Engine
+benign_sample_1474.xlsx	BENIGN	BENIGN	100.0%	0 / 5	[0, 0, 0, 0, 0]	Clean spreadsheet
+benign_sample_3114.xlsx	BENIGN	BENIGN	100.0%	0 / 5	[0, 0, 0, 0, 0]	Clean spreadsheet
+benign_sample_4127.xlsx	BENIGN	BENIGN	100.0%	0 / 5	[0, 0, 0, 0, 0]	Clean spreadsheet
+benign_sample_6389.xlsx	BENIGN	BENIGN	76.1%	1 / 4	[0, 0, 1, 0, 0]	Clean spreadsheet (NN split vote)
+benign_sample_7495.xlsx	BENIGN	BENIGN	100.0%	0 / 5	[0, 0, 0, 0, 0]	Clean spreadsheet
+Book1.xlsx	BENIGN	BENIGN	95.0%	5 / 0 (Overridden)	[1, 1, 1, 1, 1]	Structural safety: 0 macros, 0 OLE payloads
+self_play_games.csv	BENIGN	BENIGN	95.0%	5 / 0 (Overridden)	[1, 1, 1, 1, 1]	Structural safety: Plaintext CSV, 0 binaries
+58c71e6492...fb.xlsx	MALICIOUS	MALICIOUS	99.8%	5 / 0	[1, 1, 1, 1, 1]	High macro tokens & operators
+2. HTML Webpages (10 Files Tested — 90.0% Accuracy)
+File Name	Ground Truth	Final Verdict	Confidence	Voting Tally (Mal / Ben)	Individual Model Probabilities (Malicious %)	Status
+sample_00698.html	BENIGN	BENIGN	86.1%	0 / 5	RF: 47%, DT: 0%, NN: 0%, XGB: 10%, LGB: 12%	PASS
+sample_00814.html	BENIGN	BENIGN	54.2%	2 / 3	RF: 67%, DT: 100%, NN: 12%, XGB: 29%, LGB: 21%	PASS
+sample_03450.html	BENIGN	BENIGN	64.8%	2 / 3	RF: 69%, DT: 0%, NN: 7%, XGB: 56%, LGB: 44%	PASS
+sample_05389.html	BENIGN	BENIGN	96.1%	0 / 5	RF: 13%, DT: 5%, NN: 0%, XGB: 1%, LGB: 0%	PASS
+sample_07199.html	BENIGN	BENIGN	93.5%	0 / 5	RF: 26%, DT: 5%, NN: 0%, XGB: 1%, LGB: 1%	PASS
+sample_00195.html	MALICIOUS	MALICIOUS	93.6%	5 / 0	RF: 82%, DT: 97%, NN: 92%, XGB: 99%, LGB: 99%	PASS
+sample_00574.html	MALICIOUS	BENIGN	61.8%	1 / 4	RF: 30%, DT: 2%, NN: 79%, XGB: 49%, LGB: 32%	EDGE CASE
+sample_01213.html	MALICIOUS	MALICIOUS	85.4%	5 / 0	RF: 64%, DT: 97%, NN: 70%, XGB: 99%, LGB: 98%	PASS
+sample_03185.html	MALICIOUS	MALICIOUS	84.8%	5 / 0	RF: 63%, DT: 97%, NN: 69%, XGB: 98%, LGB: 97%	PASS
+sample_06759.html	MALICIOUS	MALICIOUS	94.4%	5 / 0	RF: 76%, DT: 97%, NN: 100%, XGB: 100%, LGB: 100%	PASS
+3. PDF Documents (10 Files Tested — 90.0% Accuracy)
+File Name	Ground Truth	Final Verdict	Confidence	Voting Tally (Mal / Ben)	Individual Model Probabilities (Malicious %)	Status
+2RE7KOL5...2V.pdf	BENIGN	BENIGN	98.8%	0 / 5	RF: 6%, DT: 0%, NN: 0%, XGB: 0%, LGB: 0%	PASS
+693755.pdf	BENIGN	MALICIOUS	62.2%	4 / 1	RF: 62%, DT: 92%, NN: 0%, XGB: 85%, LGB: 73%	EDGE CASE
+aa932e9b...18.pdf	BENIGN	BENIGN	99.5%	0 / 5	RF: 2%, DT: 0%, NN: 0%, XGB: 0%, LGB: 0%	PASS
+Honey_in_Depth...pdf	BENIGN	BENIGN	98.9%	0 / 5	RF: 5%, DT: 0%, NN: 0%, XGB: 0%, LGB: 0%	PASS
+i1040nre.pdf	BENIGN	BENIGN	100.0%	0 / 5	RF: 0%, DT: 0%, NN: 0%, XGB: 0%, LGB: 0%	PASS
+MM3LE7UZ...4W.pdf	BENIGN	BENIGN	98.7%	0 / 5	RF: 6%, DT: 0%, NN: 0%, XGB: 0%, LGB: 0%	PASS
+sample_04623.pdf	MALICIOUS	MALICIOUS	95.9%	5 / 0	RF: 82%, DT: 100%, NN: 100%, XGB: 98%, LGB: 99%	PASS
+sample_04787.pdf	MALICIOUS	MALICIOUS	77.0%	4 / 1	RF: 77%, DT: 98%, NN: 12%, XGB: 99%, LGB: 100%	PASS
+sample_07102.pdf	MALICIOUS	MALICIOUS	76.7%	4 / 1	RF: 73%, DT: 100%, NN: 19%, XGB: 97%, LGB: 95%	PASS
+sample_07602.pdf	MALICIOUS	MALICIOUS	77.0%	4 / 1	RF: 77%, DT: 98%, NN: 12%, XGB: 99%, LGB: 100%	PASS
+4. Word Documents (7 Files Tested — 100.0% Accuracy)
+File Name	Ground Truth	Final Verdict	Confidence	Voting Tally (Mal / Ben)	Individual Model Probabilities (Malicious %)	Status
+74e685ae...0a.docx	BENIGN	BENIGN	96.2%	0 / 5	RF: 17%, DT: 0%, NN: 3%, XGB: 0%, LGB: 0%	PASS
+AOZ2LBQO...CU.docx	BENIGN	BENIGN	96.0%	0 / 5	RF: 17%, DT: 0%, NN: 4%, XGB: 0%, LGB: 0%	PASS
+FYP PROPOSAL.docx	BENIGN	BENIGN	95.1%	0 / 5	RF: 17%, DT: 0%, NN: 8%, XGB: 0%, LGB: 0%	PASS
+rdc_mouvement...docx	BENIGN	BENIGN	96.0%	0 / 5	RF: 17%, DT: 0%, NN: 3%, XGB: 0%, LGB: 0%	PASS
+rdc_mouvement... (1)	BENIGN	BENIGN	96.0%	0 / 5	RF: 17%, DT: 0%, NN: 3%, XGB: 0%, LGB: 0%	PASS
+sample4.docx	BENIGN	BENIGN	81.7%	1 / 4	RF: 27%, DT: 0%, NN: 64%, XGB: 0%, LGB: 0%	PASS
+7d7cdc53...36.doc	MALICIOUS	MALICIOUS	99.8%	5 / 0	RF: 100%, DT: 100%, NN: 100%, XGB: 100%, LGB: 100%	PASS
+C. Forensic Data Science Deep-Dive on the 2 Edge Cases
+1. Why was 693755.pdf classified as MALICIOUS?
+Extracted Raw Features:
+text_length: $31$ characters (virtually zero extractable text)
+stream_count: $3,052$ streams ($z = +28.12$ standard deviations!)
+total_filters: $768$ filters ($z = +23.99$ standard deviations!)
+entropy_of_streams: $7.9927$ bits (theoretical max is $8.0$)
+Data Science Insight: 693755.pdf is an image-heavy scanned form. In static PDF analysis, documents containing pure raster images have almost no text and thousands of compressed image streams with near-maximum entropy. To tree-based algorithms, this statistical profile mirrors packed shellcode exploit PDFs. Interestingly, the Neural Network (MLP) with $[-3, 3]$ z-score winsorization correctly recognized it as Benign ($0.0%$ malicious probability).
+2. Why did sample_00574.html receive a split vote?
+Extracted Raw Features:
+whitespace_ratio: $0.078$ ($z = -1.78$)
+url_digit_count: $127$ ($z = -0.09$)
+internal_link_count: $7$
+Data Science Insight: The page has lower-than-average whitespace and minimal digit counts in its URLs. The Neural Network voted Malicious ($79%$), but Decision Tree ($2%$) and Random Forest ($30%$) saw standard link counts and voted Benign. This illustrates why ensemble consensus protects against rash decisions.
+4. Comprehensive Enhancements Made to the 4 Notebooks
+To ensure the notebooks are directly accessible to university students while maintaining scientific rigor for university lecturers, all four notebooks have been enhanced with:
+
+Curriculum Modules Structure: Logical thematic modules grouping all sections.
+"Guide for Students & Lecturers" Box:
+Plain-English explanations of cybersecurity threat vectors.
+Core ML concepts: Data leakage prevention, StandardScaler ($z$-score), Stratified $K$-fold cross-validation, and SHAP interpretability.
+Pedagogical notes for classroom teaching.
+Verified Benchmark Facts Table: Exact counts matching 
+
+googleCollab/data/
+.
+100% Valid TOC Links: All anchor tags validated with zero broken links.
+Overview of the Enhanced Notebook Curriculums:
+1. 
+
+explainPhishHTML.ipynb
+Reorganized from 27 flat items into 7 structured educational modules:
+
+Module 1: Setup & Data Ingestion (
+
+Sections 1 - 2
+)
+Module 2: Forensic Data Quality & Leakage Audits (
+
+Sections 3 - 5
+) — Duplicate template detection & leakage auditing.
+Module 3: Exploratory Data Analysis & Threat Feature Engineering (
+
+Sections 6 - 9
+) — 13 HTML attributes & ablation study.
+Module 4: Machine Learning Modeling & Benchmarking (
+
+Sections 10 - 16
+) — Logistic Regression, Decision Tree, Random Forest, XGBoost, LightGBM, MLP.
+Module 5: Security Calibration & Decision Thresholding (
+
+Sections 17 - 19
+) — Reliability diagrams & Brier score.
+Module 6: Explainability (XAI) & Threat Deep-Dives (
+
+Sections 20 - 24
+) — SHAP TreeExplainer & perturbation stress tests.
+Module 7: Production Deployment & Research Benchmark Evaluation (
+
+Sections 25 - 27
+) — Bundle export and confusion matrices.
+2. 
+
+explainPhishExcel.ipynb
+Organized into 4 sequential phases:
+
+Phase 1: Environment & Loading (
+
+Sections 1 - 2
+) — 20,000 samples, 9 features, collinearity defense.
+Phase 2: Data Exploration & EDA (
+
+Sections 3 - 4
+) — Macro token counts, arithmetic operators, and log scaling.
+Phase 3: Modeling & Benchmark (
+
+Section 5
+) — 5-Fold Stratified CV across all 6 architectures.
+Phase 4: Production & Verification (
+
+Sections 6 - 8
+) — Production serialization & holdout evaluation.
+3. 
+
+explainPhishPDF.ipynb
+Organized into 4 sequential phases:
+
+Phase 1: Environment & Loading (
+
+Sections 1 - 2
+) — 19,296 samples, 10 features, artifact column cleanup.
+Phase 2: Data Exploration & EDA (
+
+Sections 3 - 4
+) — Stream entropy, object counts, and filter correlations.
+Phase 3: Modeling & Benchmark (
+
+Section 5
+) — Stratified 5-fold CV & randomized search tuning.
+Phase 4: Production & Verification (
+
+Sections 6 - 8
+) — Production bundle export & confusion matrix grid.
+4. 
+
+explainPhishWord.ipynb
+Organized into 4 sequential phases:
+
+Phase 1: Environment & Loading (
+
+Sections 1 - 2
+) — 20,000 samples, 10 OpenXML features, schema missingness handling.
+Phase 2: Data Exploration & EDA (
+
+Sections 3 - 4
+) — OpenXML tags, hyperlink density, and typography attributes.
+Phase 3: Modeling & Benchmark (
+
+Section 5
+) — Baseline and advanced classifier benchmarking.
+Phase 4: Production & Verification (
+
+Sections 6 - 8
+) — Production serialization & holdout evaluation.
+5. Verification Commands You Can Run Directly
+You can independently verify any of these results in PowerShell at any time:
+
+powershell
+# 1. Run full batch inference on benign or malicious Excel samples
+python InterfaceExplainPhish\predict.py --dir InterfaceExplainPhish\Sample\eBenign_Excel\
+python InterfaceExplainPhish\predict.py --dir InterfaceExplainPhish\Sample\eMalicious_Excel\
+# 2. Run single-file prediction with explainability drivers
+python InterfaceExplainPhish\predict.py --file InterfaceExplainPhish\Sample\pmalicios_pdf\sample_04623.pdf
+# 3. Check schema parity for any format
+python InterfaceExplainPhish\parity_test.py --format pdf --file InterfaceExplainPhish\Sample\pbenign_pdf\i1040nre.pdf
+All 4 notebooks are formatted, updated, and ready for study or presentation to university students and lecturers.
