@@ -557,6 +557,16 @@ class VerticalPipelineStepper(QFrame):
                 r["sub"].setToolTip(tip)
                 r["name"].setToolTip(tip)
                 r["sub"].setStyleSheet("font-size: 10px; color: #EF4444;")
+            elif adj == "ESCALATE_TO_SUSPICIOUS":
+                r["glyph"].setText("[!]")
+                r["glyph"].setStyleSheet(
+                    "font-family: monospace; font-size: 11px; font-weight: bold; color: #F97316;"
+                )
+                r["sub"].setText("Policy Violation • Rule: AUP Enforcement")
+                tip = deep.get("rationale") or "Rule 5D: High-risk gambling/casino operations & mirror domain detected."
+                r["sub"].setToolTip(tip)
+                r["name"].setToolTip(tip)
+                r["sub"].setStyleSheet("font-size: 10px; color: #F97316;")
             else:
                 n_ind = len(deep.get("indicators", []))
                 r["sub"].setText(f"{n_ind} findings • Rule: Deep Static Verification")
@@ -718,6 +728,14 @@ class ExecutiveVerdictBanner(QFrame):
             self.bar_conf.setStyleSheet("""
                 QProgressBar { background: #261217; border-radius: 3px; }
                 QProgressBar::chunk { background: #EF4444; border-radius: 3px; }
+            """)
+        elif "SUSPICIOUS" in verdict:
+            self.setProperty("class", "verdict-banner-suspicious")
+            self.lbl_verdict.setStyleSheet("font-size: 18px; font-weight: 800; color: #F97316;")
+            self.lbl_severity.setStyleSheet("font-size: 14px; font-weight: 700; color: #F97316;")
+            self.bar_conf.setStyleSheet("""
+                QProgressBar { background: #2E1A0E; border-radius: 3px; }
+                QProgressBar::chunk { background: #F97316; border-radius: 3px; }
             """)
         elif "BENIGN" in verdict:
             if "Screened" in verdict:

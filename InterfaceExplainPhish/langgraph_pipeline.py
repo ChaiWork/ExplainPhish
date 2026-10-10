@@ -44,6 +44,7 @@ from extractors.base import ExtractionError, check_file_safety
 from inference import (
     FORMAT_DISPLAY,
     check_structural_safety,
+    check_web_policy_risk,
     compute_risk_drivers,
     detect_format,
     extract_features,
@@ -323,6 +324,16 @@ def node_ml_ensemble(state: ExplainPhishState) -> Dict[str, Any]:
                     )
             except Exception:
                 pass
+
+        # Check high-risk policy categories (gambling/casino mirrors, crypto scams)
+        try:
+            is_policy_risk, policy_cat, policy_info = check_web_policy_risk(path, source_url=state.get("source_url"))
+            if is_policy_risk and ensemble_verdict == "BENIGN":
+                borderline_reasons.append(
+                    f"Web resource matches High-Risk Policy Category ({policy_cat}); deep threat & policy analysis required"
+                )
+        except Exception:
+            pass
     elif fmt == "pdf":
         js_count = raw_feats.get("js_count", raw_feats.get("javascript_count", 0))
         open_action = raw_feats.get("open_action_count", 0)
@@ -456,6 +467,26 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
             if not any("Stealth hidden <iframe>" in i for i in deep_findings["indicators"]):
                 deep_findings["indicators"].append("Verified DOM: 0 stealth hidden iframes detected")
 
+            # 5. High-Risk Web Category & Policy Risk Inspection
+            try:
+                is_policy_risk, policy_cat, policy_info = check_web_policy_risk(path, source_url=state.get("source_url"))
+                if is_policy_risk:
+                    matches_list = policy_info.get("content_matches", [])[:3] + policy_info.get("domain_matches", [])
+                    deep_findings["indicators"].append(
+                        f"High-Risk Web Category Detected: {policy_cat} (Policy: {policy_info.get('policy_code', 'AUP-VIOLATION')}, Indicators: {', '.join(matches_list)})"
+                    )
+                    deep_findings["policy_risk"] = {
+                        "category": policy_cat,
+                        "code": policy_info.get("policy_code", "AUP-VIOLATION"),
+                        "details": policy_info,
+                    }
+                    iocs.append({
+                        "type": "Policy Violation Category",
+                        "value": f"{policy_cat} [{policy_info.get('policy_code')}]",
+                    })
+            except Exception:
+                pass
+
         elif fmt == "pdf":
             raw_pdf = path.read_bytes()
             # 1. PDF /Launch (execute external program)
@@ -558,10 +589,22 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
     elif fmt == "html":
         has_cred_theft = any("Credential input field" in i or "external URI" in i for i in deep_findings["indicators"])
         has_stealth_iframe = any("Stealth hidden <iframe>" in i for i in deep_findings["indicators"])
+        has_policy_risk = any("High-Risk Web Category Detected" in i for i in deep_findings["indicators"])
+        policy_cat_name = deep_findings.get("policy_risk", {}).get("category", "Policy Violation")
+
         if has_cred_theft and original_verdict == "BENIGN":
             final_verdict = "MALICIOUS (Phishing Form Detected)"
             deep_findings["verdict_adjustment"] = "UPGRADE_TO_MALICIOUS"
             deep_findings["rationale"] = "Active credential harvesting form targeting external endpoint confirmed."
+        elif has_policy_risk and original_verdict == "BENIGN":
+            final_verdict = f"SUSPICIOUS ({policy_cat_name})"
+            deep_findings["verdict_adjustment"] = "ESCALATE_TO_SUSPICIOUS"
+            deep_findings["rationale"] = (
+                f"ML models returned benign phishing score because the site is an active commercial portal "
+                f"rather than a brand-impersonation phishing lure. However, deep content inspection confirmed "
+                f"an active {policy_cat_name} web portal operating under an evasive rotating mirror domain. "
+                "Classified SUSPICIOUS under corporate Acceptable Use Policy (AUP)."
+            )
         elif original_verdict == "MALICIOUS" and not has_cred_theft and not has_stealth_iframe:
             final_verdict = "BENIGN (False-Positive Screened)"
             deep_findings["verdict_adjustment"] = "DOWNGRADE_TO_BENIGN"
@@ -585,6 +628,8 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
             rule_desc = "Rule 5A (False-Positive Screening): Verified 0 VBA macros, 0 OLE payloads, 0 DDE, and 0 remote templates. Calibrated to BENIGN."
     elif deep_findings.get("verdict_adjustment") == "UPGRADE_TO_MALICIOUS":
         rule_desc = f"Rule 5B (Forensic Override): Verified active execution vectors ({', '.join(deep_findings['indicators'][:2])}). Escalated to MALICIOUS."
+    elif deep_findings.get("verdict_adjustment") == "ESCALATE_TO_SUSPICIOUS":
+        rule_desc = f"Rule 5D (Policy Enforcement): Detected {policy_cat_name} & mirror domain. Escalated to SUSPICIOUS."
     else:
         rule_desc = f"Rule 5C (Forensic Verification): Static inspection evaluated {len(deep_findings['indicators'])} indicators."
     rules["deep_threat_analysis"] = rule_desc
@@ -716,6 +761,36 @@ def node_mitre_mapping(state: ExplainPhishState) -> Dict[str, Any]:
                 "action": "Revoke active sessions and force MFA re-authentication for any recipient who opened the attachment.",
             })
 
+    elif "SUSPICIOUS" in final_verdict:
+        threat_level = "MEDIUM"
+        mitre_tactics.append({
+            "id": "AUP-GAMBLING",
+            "tactic": "Policy Violation",
+            "technique": "Unsanctioned Commercial Web Resource: Online Gambling / Sportsbook",
+            "description": "Access to unregulated online casino / betting portal. Prohibited under enterprise Acceptable Use Policy (AUP).",
+        })
+        mitre_tactics.append({
+            "id": "T1566.002",
+            "tactic": "Initial Access",
+            "technique": "High-Risk Mirror Domain / Unsanctioned Web Portal",
+            "description": "Rotating mirror domain associated with regulatory evasion and gray-market online gambling operations.",
+        })
+        actions.append({
+            "stage": "Perimeter Defense",
+            "tier": "Tier 1 - Web Category Block",
+            "action": "Enforce category block on Secure Web Gateway (Zscaler / Palo Alto Networks URL Filtering: Gambling & Betting).",
+        })
+        actions.append({
+            "stage": "DNS Security",
+            "tier": "Tier 2 - Sinkhole Evasive Mirror",
+            "action": "Sinkhole rotating mirror domain on enterprise recursive DNS resolvers (Infoblox / Cisco Umbrella).",
+        })
+        actions.append({
+            "stage": "Compliance & Audit",
+            "tier": "Tier 3 - AUP Telemetry Logging",
+            "action": "Log Acceptable Use Policy (AUP) violation event on SIEM; notify user/SOC of unsanctioned browsing activity.",
+        })
+
     elif "BENIGN" in final_verdict:
         threat_level = "LOW" if "Screened" in final_verdict else "CLEAN"
         mitre_tactics.append({
@@ -772,7 +847,7 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
     playbook = state.get("soc_playbook_actions", [])
     deep = state.get("deep_analysis", {})
 
-    status_badge = "🔴" if "MALICIOUS" in verdict else ("🟢" if "CLEAN" in threat_level else "🟡")
+    status_badge = "🔴" if "MALICIOUS" in verdict else ("🟠" if "SUSPICIOUS" in verdict else ("🟢" if "CLEAN" in threat_level else "🟡"))
 
     rules = dict(state.get("applied_rules") or {})
     rule_desc = f"Rule 7 (Executive Synthesis): Synthesized comprehensive SOC IR dossier with verdict {verdict}"

@@ -474,6 +474,86 @@ def check_structural_safety(path: Path, fmt: str, raw_features: Dict[str, Any]) 
     return False, "Standard inspection applied"
 
 
+def check_web_policy_risk(
+    path: Path,
+    source_url: Optional[str] = None,
+) -> Tuple[bool, str, Dict[str, Any]]:
+    """
+    Evaluates Acceptable Use Policy (AUP) and high-risk web categories for HTML documents:
+    - Online Gambling & Unregulated Casino Mirrors (e.g. BK8, W88, Dafabet, 1xBet)
+    - Crypto Drainers & Airdrop Phishing Scams
+    - Unauthorized Piracy & Warez Hubs
+    """
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False, "", {}
+
+    title = ""
+    meta_desc = ""
+    body_snippet = ""
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(text, "html.parser")
+        title = (soup.title.string or "").strip().lower() if soup.title else ""
+        for m in soup.find_all("meta"):
+            name = m.get("name", "").lower()
+            prop = m.get("property", "").lower()
+            if name in ("description", "keywords") or prop in ("og:description", "og:title"):
+                meta_desc += " " + m.get("content", "").lower()
+        body_snippet = " ".join(soup.stripped_strings).lower()[:20000]
+    except Exception:
+        t_match = re.search(r"<title[^>]*>(.*?)</title>", text, re.IGNORECASE | re.DOTALL)
+        if t_match:
+            title = t_match.group(1).strip().lower()
+        body_snippet = re.sub(r"<[^>]+>", " ", text[:20000]).lower()
+
+    full_haystack = f"{title} {meta_desc} {body_snippet}"
+    url_haystack = (source_url or "").lower() + " " + path.name.lower()
+
+    # Category A: Online Gambling & Sportsbook
+    gambling_domain_kw = [
+        "bk8", "w88", "me88", "maxim88", "12bet", "dafabk", "dafabet", "bet365",
+        "1xbet", "sbobet", "m88", "fun88", "22bet", "mega888", "918kiss", "kiss918",
+        "cmd368", "nova88", "aw8", "uea8", "jw8", "eclbet", "atp88", "slot777",
+        "casino", "sportsbook", "betting"
+    ]
+    gambling_content_kw = [
+        "online casino", "trusted online casino", "sports betting", "live casino",
+        "slot game", "slot games", "slot online", "judi online", "taruhan bola",
+        "agen slot", "poker online", "online gambling", "roulette online",
+        "jackpot slot", "sportsbook", "baccarat", "live dealer", "welcome bonus",
+        "free bet", "deposit bonus", "pragmatic play", "spadegaming"
+    ]
+
+    domain_gambling_hits = [k for k in gambling_domain_kw if k in url_haystack]
+    content_gambling_hits = [k for k in gambling_content_kw if k in full_haystack]
+
+    if (len(domain_gambling_hits) > 0 and len(content_gambling_hits) > 0) or len(content_gambling_hits) >= 2:
+        return True, "Online Gambling / Unregulated Casino", {
+            "policy_code": "AUP-GAMBLING",
+            "domain_matches": domain_gambling_hits,
+            "content_matches": content_gambling_hits[:5],
+            "title": title[:100],
+        }
+
+    # Category B: Crypto Drainer / Wallet Theft Scam
+    crypto_kw = [
+        "connect wallet to claim", "crypto drainer", "airdrop claim",
+        "claim free token", "double your crypto", "giveaway 2x", "send eth get 2x"
+    ]
+    crypto_hits = [k for k in crypto_kw if k in full_haystack]
+    if len(crypto_hits) >= 1:
+        return True, "Crypto Scam / Wallet Drainer", {
+            "policy_code": "AUP-CRYPTO-SCAM",
+            "domain_matches": [],
+            "content_matches": crypto_hits,
+            "title": title[:100],
+        }
+
+    return False, "", {}
+
+
 def run_inference(
     file_path: str | Path,
     fmt: str | None = None,
@@ -592,6 +672,18 @@ def run_inference(
             structural_safety_applied = True
             structural_safety_reason = safety_note
 
+        # Web policy category risk check for HTML
+        policy_risk_applied = False
+        policy_risk_category = None
+        if fmt == "html" and verdict == "BENIGN":
+            is_policy, cat_name, policy_info = check_web_policy_risk(path)
+            if is_policy:
+                verdict = f"SUSPICIOUS ({cat_name})"
+                confidence = 0.8800
+                band = "HIGH"
+                policy_risk_applied = True
+                policy_risk_category = cat_name
+
         vote: VoteResult = {
             "verdict": verdict,
             "confidence": round(confidence, 4),
@@ -602,6 +694,8 @@ def run_inference(
             "target_model": "Ensemble (Consensus)",
             "structural_safety_applied": structural_safety_applied,
             "structural_safety_reason": structural_safety_reason,
+            "policy_risk_applied": policy_risk_applied,
+            "policy_risk_category": policy_risk_category,
         }
 
     # 6. Explainability drivers

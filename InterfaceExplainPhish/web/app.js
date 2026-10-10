@@ -117,8 +117,14 @@
         // Clear file
         btnClearFile.addEventListener('click', clearSelectedFile);
 
-        // URL input input listener
+        // URL input listeners
         urlInput.addEventListener('input', validateRunState);
+        urlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                runInvestigation();
+            }
+        });
 
         // Sample Select
         sampleSelect.addEventListener('change', handleSampleChosen);
@@ -199,7 +205,7 @@
             btnRunInvestigation.disabled = !selectedFile;
         } else {
             const val = urlInput.value.trim();
-            btnRunInvestigation.disabled = !(val.startsWith('http://') || val.startsWith('https://'));
+            btnRunInvestigation.disabled = val.length === 0;
         }
     }
 
@@ -259,10 +265,15 @@
                     body: formData,
                 });
             } else {
+                let targetUrl = urlInput.value.trim();
+                if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                    targetUrl = 'https://' + targetUrl;
+                    urlInput.value = targetUrl;
+                }
                 resp = await fetch('/api/analyze/url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: urlInput.value.trim() }),
+                    body: JSON.stringify({ url: targetUrl }),
                 });
             }
 
@@ -408,6 +419,10 @@
                 setStepRow('deep_threat_analysis', 'malicious', '[!]',
                     `Overridden • Rule: Forensic Payload Detected`,
                     rules.deep_threat_analysis || 'Rule 5B: Active execution vectors detected.');
+            } else if (deepAdj === 'ESCALATE_TO_SUSPICIOUS') {
+                setStepRow('deep_threat_analysis', 'borderline', '[!]',
+                    `Policy Violation • Rule: AUP Enforcement`,
+                    rules.deep_threat_analysis || 'Rule 5D: High-risk gambling/casino operations detected.');
             } else {
                 const nInd = (data.deep_analysis.indicators || []).length;
                 setStepRow('deep_threat_analysis', 'completed', '[v]',
@@ -479,6 +494,8 @@
         // Banner Color Coding
         if (verdict.includes('MALICIOUS')) {
             verdictBanner.className = 'verdict-banner banner-malicious';
+        } else if (verdict.includes('SUSPICIOUS') || verdict.includes('INACCESSIBLE')) {
+            verdictBanner.className = 'verdict-banner banner-suspicious';
         } else if (verdict.includes('Screened') || threat === 'LOW') {
             verdictBanner.className = 'verdict-banner banner-calibrated';
         } else if (verdict.includes('BENIGN')) {

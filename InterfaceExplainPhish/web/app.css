@@ -757,6 +757,14 @@ body {
 .banner-calibrated .threat-severity-badge { background: rgba(245, 158, 11, 0.2); color: var(--amber-borderline); }
 .banner-calibrated .conf-progress-fill { background: var(--amber-borderline); }
 
+.banner-suspicious {
+    background: rgba(249, 115, 22, 0.1);
+    border: 1px solid rgba(249, 115, 22, 0.4);
+}
+.banner-suspicious .verdict-badge { color: #F97316; }
+.banner-suspicious .threat-severity-badge { background: rgba(249, 115, 22, 0.2); color: #F97316; }
+.banner-suspicious .conf-progress-fill { background: #F97316; }
+
 .banner-malicious {
     background: var(--crimson-bg);
     border: 1px solid var(--crimson-border);
