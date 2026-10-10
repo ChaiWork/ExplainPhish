@@ -23,7 +23,7 @@ import sys
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -34,9 +34,16 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from extractors.base import ExtractionError, check_file_safety
 from inference import (
     FORMAT_DISPLAY,
+    check_structural_safety,
     compute_risk_drivers,
     detect_format,
     extract_features,
@@ -171,11 +178,11 @@ def node_feature_extraction(state: ExplainPhishState) -> Dict[str, Any]:
         return {"error": state.get("error", "Skipped due to safety failure")}
 
     path = Path(state["file_path"])
-    fmt = state["file_format"]
+    fmt = state.get("file_format") or detect_format(path)
 
     try:
         raw_feats = extract_features(path, fmt)
-        return {"raw_features": raw_feats, "error": None}
+        return {"raw_features": raw_feats, "file_format": fmt, "error": None}
     except Exception as exc:
         return {"error": f"Feature extraction failed: {str(exc)}", "raw_features": {}}
 
@@ -188,60 +195,91 @@ def node_feature_extraction(state: ExplainPhishState) -> Dict[str, Any]:
 def node_ml_ensemble(state: ExplainPhishState) -> Dict[str, Any]:
     """
     Scales features with format-specific StandardScaler, evaluates
-    multi-model predictions (XGBoost, Random Forest, Decision Tree),
-    and measures voting consensus.
+    multi-model predictions across the 5 voting architectures (Random Forest,
+    Decision Tree, Neural Network, XGBoost, LightGBM) matching predict.py,
+    and computes majority voting consensus with activation-safe clipping.
     """
     if state.get("error"):
         return {}
 
     fmt = state["file_format"]
     raw_feats = state["raw_features"]
+    path = Path(state["file_path"])
 
     bundle = load_model_bundle(fmt)
     selected_features = bundle["selected_features"]
     scaler = bundle["scaler"]
-    rf = bundle["rf_model"]
-    dt = bundle["dt_model"]
-    xgb = bundle.get("xgb_model")
-    lr = bundle.get("lr_model")
 
     sample_std, std_dict = standardize_features(raw_feats, selected_features, scaler)
 
-    prob_rf = float(rf.predict_proba(sample_std)[0, 1])
-    prob_dt = float(dt.predict_proba(sample_std)[0, 1])
-
-    predictions = [
-        {"model": "Random Forest", "prediction": int(prob_rf >= 0.5), "probability": round(prob_rf, 4)},
-        {"model": "Decision Tree", "prediction": int(prob_dt >= 0.5), "probability": round(prob_dt, 4)},
+    # 5-Model architecture registry identical to predict.py / inference.py
+    model_registry: List[Tuple[str, Any]] = [
+        ("Random Forest", bundle.get("rf_model")),
+        ("Decision Tree", bundle.get("dt_model")),
+        ("Neural Network", bundle.get("mlp_model")),
+        ("XGBoost", bundle.get("xgb_model")),
+        ("LightGBM", bundle.get("lgb_model")),
     ]
-    raw_probs = {"Random Forest": prob_rf, "Decision Tree": prob_dt}
 
-    if xgb is not None:
-        prob_xgb = float(xgb.predict_proba(sample_std)[0, 1])
-        predictions.append({"model": "XGBoost", "prediction": int(prob_xgb >= 0.5), "probability": round(prob_xgb, 4)})
-        raw_probs["XGBoost"] = prob_xgb
-    elif lr is not None:
-        prob_lr = float(lr.predict_proba(sample_std)[0, 1])
-        predictions.append({"model": "Logistic Regression", "prediction": int(prob_lr >= 0.5), "probability": round(prob_lr, 4)})
-        raw_probs["Logistic Regression"] = prob_lr
+    # Optional fallback for Logistic Regression if available
+    if bundle.get("lr_model") is not None and not any(m[0] == "Logistic Regression" for m in model_registry):
+        model_registry.append(("Logistic Regression", bundle.get("lr_model")))
+
+    predictions: List[Dict[str, Any]] = []
+    raw_probs: Dict[str, float] = {}
+
+    for model_name, model_obj in model_registry:
+        if model_obj is not None:
+            # Z-Score Outlier Clipping / Winsorization for Neural Network (MLP)
+            # Prevents extreme out-of-distribution z-scores from blowing up linear/ReLU activations
+            if model_name == "Neural Network":
+                x_input = np.clip(sample_std, -3.0, 3.0)
+            else:
+                x_input = sample_std
+
+            if hasattr(model_obj, "feature_names_in_"):
+                x_eval = pd.DataFrame(x_input, columns=selected_features)
+            else:
+                x_eval = x_input
+
+            prob = float(model_obj.predict_proba(x_eval)[0, 1])
+            pred = int(prob >= 0.5)
+            predictions.append({
+                "model": model_name,
+                "prediction": pred,
+                "probability": round(prob, 4),
+                "probability_malicious": round(prob, 4),
+            })
+            raw_probs[model_name] = prob
 
     malicious_votes = sum(p["prediction"] for p in predictions)
     benign_votes = len(predictions) - malicious_votes
     all_prob_values = list(raw_probs.values())
-    mean_prob = sum(all_prob_values) / len(all_prob_values)
+    mean_prob = float(np.mean(all_prob_values)) if all_prob_values else 0.0
 
-    ensemble_verdict = "MALICIOUS" if malicious_votes >= 2 else "BENIGN"
+    # True majority consensus voting across all active models (matching predict.py)
+    ensemble_verdict = "MALICIOUS" if malicious_votes > (len(predictions) / 2.0) else "BENIGN"
     confidence = mean_prob if ensemble_verdict == "MALICIOUS" else (1.0 - mean_prob)
     band = "HIGH" if confidence >= 0.85 else ("MEDIUM" if confidence >= 0.65 else "LOW")
     unanimous = (malicious_votes == 0 or malicious_votes == len(predictions))
 
-    # Evaluate Borderline & Anomaly Criteria
+    # Evaluate Borderline & Anomaly Criteria for Dynamic LangGraph Routing
     borderline_reasons: List[str] = []
     if not unanimous:
-        borderline_reasons.append(f"Split consensus vote ({malicious_votes} Malicious vs {benign_votes} Benign)")
+        borderline_reasons.append(
+            f"Split consensus vote ({malicious_votes} Malicious vs {benign_votes} Benign across {len(predictions)} models)"
+        )
     if 0.35 <= mean_prob <= 0.65:
         borderline_reasons.append(f"Soft ensemble probability {mean_prob:.1%} resides in ambiguity band [35%-65%]")
-    
+
+    # Check structural threat verification from inference.py
+    try:
+        is_safe_struct, safety_note = check_structural_safety(path, fmt, raw_feats)
+        if is_safe_struct and ensemble_verdict == "MALICIOUS":
+            borderline_reasons.append(f"Structural verification anomaly: {safety_note} conflicts with Malicious ML consensus")
+    except Exception:
+        pass
+
     # Check format-specific heuristic discrepancies (e.g. ML flags Malicious but macro count is 0)
     if fmt in ("excel", "word"):
         macro_vocab = raw_feats.get("macro_vocab_size", 0)
