@@ -81,7 +81,10 @@ def format_report(res: InferenceResult) -> str:
         lines.append(f"  OVERALL CONSENSUS : {verdict_badge}")
         lines.append(f"  Confidence Score  : {conf:.1f}% ({band} confidence)")
         lines.append(f"  Voting Consensus  : {counts.get('malicious', 0)} Malicious vs {counts.get('benign', 0)} Benign (out of {n_voters} models)")
-        if uncertain:
+        if vote.get("structural_safety_applied"):
+            lines.append("  Agreement Status  : Overridden to BENIGN by Structural Threat Verification")
+            lines.append(f"  Safety Engine Note: {vote.get('structural_safety_reason')}")
+        elif uncertain:
             lines.append("  Agreement Status  : Split decision (majority vote applied)")
         else:
             lines.append(f"  Agreement Status  : Unanimous consensus across all {n_voters} models")
