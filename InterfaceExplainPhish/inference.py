@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TypedDict
@@ -215,15 +216,24 @@ def load_model_bundle(fmt: str) -> Dict[str, Any]:
     # Load advanced / format-specific models if available
     mlp_model = None
     if (model_dir / "mlp_model.joblib").exists():
-        mlp_model = joblib.load(model_dir / "mlp_model.joblib")
+        try:
+            mlp_model = joblib.load(model_dir / "mlp_model.joblib")
+        except Exception:
+            mlp_model = None
 
     xgb_model = None
     if (model_dir / "xgb_model.joblib").exists():
-        xgb_model = joblib.load(model_dir / "xgb_model.joblib")
+        try:
+            xgb_model = joblib.load(model_dir / "xgb_model.joblib")
+        except Exception:
+            xgb_model = None
 
     lgb_model = None
     if (model_dir / "lgb_model.joblib").exists():
-        lgb_model = joblib.load(model_dir / "lgb_model.joblib")
+        try:
+            lgb_model = joblib.load(model_dir / "lgb_model.joblib")
+        except Exception:
+            lgb_model = None
 
     with open(model_dir / "selected_features.json", "r", encoding="utf-8") as f:
         selected_features = json.load(f)
@@ -431,6 +441,35 @@ def check_structural_safety(path: Path, fmt: str, raw_features: Dict[str, Any]) 
                 pass
             if raw_features.get("total_words", 0) > 0 or raw_features.get("paragraph_count", 0) > 0:
                 return True, "Clean document (0 macros, 0 OLE payloads)"
+
+    elif fmt == "html":
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            # 1. Interactive password input fields
+            if re.search(r'<input[^>]*type=["\']password["\']', text, re.IGNORECASE):
+                return False, "HTML contains interactive password input field (<input type='password'>)"
+
+            # 2. Form submission posting to external URI
+            forms = re.findall(r'<form\b([^>]*)>', text, re.IGNORECASE)
+            for f_attrs in forms:
+                is_post = bool(re.search(r'method=["\']post["\']', f_attrs, re.IGNORECASE))
+                action_match = re.search(r'action=["\']([^"\']+)["\']', f_attrs, re.IGNORECASE)
+                if action_match:
+                    action_val = action_match.group(1).strip().lower()
+                    if (action_val.startswith("http://") or action_val.startswith("https://") or action_val.startswith("//")) and is_post:
+                        return False, f"HTML contains form posting credentials to external URI: {action_val}"
+
+            # 3. Stealth hidden iframes
+            if re.search(r'<iframe[^>]*(style=["\'][^"\']*(display:\s*none|visibility:\s*hidden|width:\s*0|height:\s*0)[^"\']*|width=["\']0["\']|height=["\']0["\'])', text, re.IGNORECASE):
+                return False, "HTML contains stealth hidden <iframe>"
+
+            # 4. Meta-refresh redirect to external URL
+            if re.search(r'<meta[^>]*http-equiv=["\']refresh["\'][^>]*url=https?://', text, re.IGNORECASE):
+                return False, "HTML contains automatic meta-refresh redirect to external URL"
+
+            return True, "Clean web document (0 password fields, 0 external form POST actions, 0 hidden iframes)"
+        except Exception:
+            pass
 
     return False, "Standard inspection applied"
 

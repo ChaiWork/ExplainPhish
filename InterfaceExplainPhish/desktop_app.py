@@ -489,56 +489,95 @@ class VerticalPipelineStepper(QFrame):
 
         if node_name == "intake_safety":
             fmt = output.get("format_display", "Verified")
-            r["sub"].setText(f"Verified {fmt} format")
+            rule = output.get("applied_rule") or f"Rule 1: Format signature, container integrity, and size limits verified for {fmt}."
+            r["sub"].setText(f"Verified {fmt} • Rule: Sandbox Integrity Passed")
+            r["sub"].setToolTip(rule)
+            r["name"].setToolTip(rule)
             r["sub"].setStyleSheet("font-size: 10px; color: #10B981;")
 
         elif node_name == "feature_extraction":
             n = len(output.get("raw_features", {}))
-            r["sub"].setText(f"Extracted {n} telemetry vectors")
+            rule = output.get("applied_rule") or f"Rule 2: Computed {n} structural, linguistic, and behavioral telemetry vectors."
+            r["sub"].setText(f"Extracted {n} vectors • Rule: Static Telemetry")
+            r["sub"].setToolTip(rule)
+            r["name"].setToolTip(rule)
             r["sub"].setStyleSheet("font-size: 10px; color: #10B981;")
 
         elif node_name == "ml_ensemble":
             verdict = output.get("ensemble_verdict", "N/A")
             conf = output.get("confidence_score", 0.0)
             is_borderline = output.get("is_borderline", False)
+            reasons = output.get("borderline_reasons", [])
+            rule = output.get("applied_rule")
             if is_borderline:
                 r["glyph"].setText("[!]")
                 r["glyph"].setStyleSheet(
                     "font-family: monospace; font-size: 11px; font-weight: bold; color: #F59E0B;"
                 )
-                r["sub"].setText(f"{verdict} ({conf:.1%}) - Borderline routed")
+                r["sub"].setText(f"{verdict} ({conf:.1%}) • Rule: Borderline Escalated")
+                tip = f"Rule 3: Borderline criteria triggered -> Escalate to Deep Forensics.\nReasons:\n" + "\n".join(f"- {re}" for re in reasons)
+                r["sub"].setToolTip(tip)
+                r["name"].setToolTip(tip)
                 r["sub"].setStyleSheet("font-size: 10px; color: #F59E0B;")
             else:
-                r["sub"].setText(f"{verdict} ({conf:.1%}) - Unanimous consensus")
+                r["sub"].setText(f"{verdict} ({conf:.1%}) • Rule: Unanimous Consensus")
+                tip = rule or f"Rule 3: Unanimous multi-model agreement across all architectures ({conf:.1%} confidence)."
+                r["sub"].setToolTip(tip)
+                r["name"].setToolTip(tip)
                 r["sub"].setStyleSheet("font-size: 10px; color: #10B981;")
 
         elif node_name == "explainability":
             n_d = len(output.get("top_risk_drivers", []))
-            r["sub"].setText(f"Ranked {n_d} decision drivers")
+            rule = output.get("applied_rule") or f"Rule 4: Ranked top {n_d} decision drivers using normalized z-score deviations."
+            r["sub"].setText(f"Ranked {n_d} drivers • Rule: XAI Attribution")
+            r["sub"].setToolTip(rule)
+            r["name"].setToolTip(rule)
             r["sub"].setStyleSheet("font-size: 10px; color: #10B981;")
 
         elif node_name == "deep_threat_analysis":
             deep = output.get("deep_analysis", {})
             adj = deep.get("verdict_adjustment", "NONE")
-            if adj != "NONE":
+            if adj == "DOWNGRADE_TO_BENIGN":
                 r["glyph"].setText("[!]")
                 r["glyph"].setStyleSheet(
                     "font-family: monospace; font-size: 11px; font-weight: bold; color: #F59E0B;"
                 )
-                r["sub"].setText(f"Calibrated: {adj}")
+                r["sub"].setText("Calibrated • Rule: False-Positive Screened")
+                tip = deep.get("rationale") or "Rule 5A: Verified 0 macros, 0 OLE, 0 DDE, and 0 remote templates. Calibrated to safe."
+                r["sub"].setToolTip(tip)
+                r["name"].setToolTip(tip)
                 r["sub"].setStyleSheet("font-size: 10px; color: #F59E0B;")
+            elif adj == "UPGRADE_TO_MALICIOUS":
+                r["glyph"].setText("[!]")
+                r["glyph"].setStyleSheet(
+                    "font-family: monospace; font-size: 11px; font-weight: bold; color: #EF4444;"
+                )
+                r["sub"].setText("Overridden • Rule: Forensic Payload Detected")
+                tip = deep.get("rationale") or f"Rule 5B: Discovered active execution indicators: {', '.join(deep.get('indicators', []))}."
+                r["sub"].setToolTip(tip)
+                r["name"].setToolTip(tip)
+                r["sub"].setStyleSheet("font-size: 10px; color: #EF4444;")
             else:
                 n_ind = len(deep.get("indicators", []))
-                r["sub"].setText(f"{n_ind} Forensic findings verified")
+                r["sub"].setText(f"{n_ind} findings • Rule: Deep Static Verification")
+                tip = output.get("applied_rule") or f"Rule 5C: Verified {n_ind} static inspection indicators."
+                r["sub"].setToolTip(tip)
+                r["name"].setToolTip(tip)
                 r["sub"].setStyleSheet("font-size: 10px; color: #10B981;")
 
         elif node_name == "mitre_mapping":
             n_m = len(output.get("mitre_tactics", []))
-            r["sub"].setText(f"{n_m} MITRE techniques mapped")
+            rule = output.get("applied_rule") or f"Rule 6: Mapped {n_m} MITRE techniques & generated prescriptive SOAR playbooks."
+            r["sub"].setText(f"{n_m} techniques • Rule: ATT&CK & SOAR")
+            r["sub"].setToolTip(rule)
+            r["name"].setToolTip(rule)
             r["sub"].setStyleSheet("font-size: 10px; color: #10B981;")
 
         elif node_name == "soc_report":
-            r["sub"].setText("Generated incident report")
+            rule = output.get("applied_rule") or "Rule 7: Executive incident report synthesized with MITRE mappings and playbooks."
+            r["sub"].setText("Generated dossier • Rule: IR Synthesis")
+            r["sub"].setToolTip(rule)
+            r["name"].setToolTip(rule)
             r["sub"].setStyleSheet("font-size: 10px; color: #10B981;")
 
     def set_skipped(self, node_name: str, reason: str = "Bypassed (Clear Verdict)"):
@@ -549,7 +588,10 @@ class VerticalPipelineStepper(QFrame):
                 "font-family: monospace; font-size: 11px; font-weight: bold; color: #475569;"
             )
             r["name"].setStyleSheet("font-size: 12px; font-weight: 500; color: #475569;")
-            r["sub"].setText(reason)
+            r["sub"].setText("Bypassed • Rule: Fast-Track (Clear Consensus)")
+            tip = "Rule: High-confidence unanimous consensus achieved; deep forensics bypassed."
+            r["sub"].setToolTip(tip)
+            r["name"].setToolTip(tip)
             r["sub"].setStyleSheet("font-size: 10px; color: #475569;")
 
 
@@ -1424,6 +1466,12 @@ class ExplainPhishDesktopApp(QMainWindow):
                     files = sorted([f for f in folder.iterdir() if f.is_file()])
                     for file_p in files[:2]:
                         self.cmb_samples.addItem(f"[{folder.name}] {file_p.name}", str(file_p))
+
+        downloads_dir = _HERE / "downloads"
+        if downloads_dir.exists():
+            dl_files = sorted([f for f in downloads_dir.iterdir() if f.is_file() and not f.name.startswith(".")])
+            for file_p in dl_files:
+                self.cmb_samples.addItem(f"[Web/Downloaded] {file_p.name}", str(file_p))
 
         self.cmb_samples.blockSignals(False)
 

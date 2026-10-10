@@ -28,3 +28,11 @@ Thumbs.db
 googleCollab/InterfaceExplainPhish/
 googleCollab/googleCollab/
 googleCollab/output/
+
+# Live fetched analysis downloads
+InterfaceExplainPhish/downloads/
+downloads/
+
+# Generated SOC analysis reports
+InterfaceExplainPhish/reports/
+reports/

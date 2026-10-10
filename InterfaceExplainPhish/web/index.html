@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ExplainPhish Autonomous SOC Workstation - Enterprise phishing detection, multi-model consensus, XAI drivers, and automated SOAR response playbooks.">
+    <title>ExplainPhish — Autonomous SOC Threat Investigation Workstation</title>
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+    <!-- Top Navigation Header -->
+    <header class="app-header" id="appHeader">
+        <div class="header-left">
+            <div class="brand-container">
+                <span class="brand-icon">🛡️</span>
+                <div class="brand-titles">
+                    <span class="brand-name">ExplainPhish</span>
+                    <span class="brand-tag">SOC WORKSTATION v2.0</span>
+                </div>
+            </div>
+            <div class="status-pill active" id="systemStatusPill">
+                <span class="pulse-dot"></span>
+                <span class="status-text" id="statusPillText">5-Model Consensus Engine Ready</span>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <!-- Sample Document Quick Loader -->
+            <div class="sample-select-wrapper">
+                <label for="sampleSelect" class="sr-only">Select Test Sample</label>
+                <select id="sampleSelect" class="sample-select" aria-label="Select Test Sample">
+                    <option value="">Select Sample Document...</option>
+                </select>
+            </div>
+            <button id="btnRefreshSamples" class="btn-icon" title="Refresh Sample Catalog">🔄</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="app-main" id="appMain">
+        <!-- Hidden h1 for semantic accessibility -->
+        <h1 class="sr-only">ExplainPhish Autonomous Incident Response &amp; Threat Forensics</h1>
+
+        <div class="workspace-grid">
+            <!-- Left Column: Ingestion Workbench & Investigation Stepper -->
+            <section class="workbench-panel" id="workbenchPanel">
+                <!-- Ingestion Mode Selector -->
+                <div class="panel-card ingestion-card" id="ingestionCard">
+                    <div class="card-header">
+                        <span class="card-title">DOCUMENT INGESTION</span>
+                        <div class="mode-tabs">
+                            <button id="tabModeFile" class="mode-tab active" data-mode="file">File Upload</button>
+                            <button id="tabModeUrl" class="mode-tab" data-mode="url">Live Web URL</button>
+                        </div>
+                    </div>
+
+                    <!-- File Drop Target -->
+                    <div id="fileUploadContainer" class="upload-container">
+                        <div id="dropZone" class="drop-zone" tabindex="0">
+                            <div class="drop-icon">📄</div>
+                            <div class="drop-main-text">Drag &amp; drop document to triage</div>
+                            <div class="drop-sub-text">Supported: HTML, PDF, Excel (.xlsx, .xls), Word (.docx, .doc)</div>
+                            <input type="file" id="fileInput" class="file-input" accept=".html,.htm,.pdf,.xlsx,.xlsm,.xls,.docx,.docm,.doc,.csv">
+                            <button id="btnBrowseFile" class="btn-secondary">Browse Local Document</button>
+                        </div>
+                        <div id="selectedFileInfo" class="selected-file-info hidden">
+                            <span class="file-icon" id="fileTypeIcon">📄</span>
+                            <div class="file-details">
+                                <span class="file-name" id="selectedFileName">sample.html</span>
+                                <span class="file-size" id="selectedFileSize">0 KB</span>
+                            </div>
+                            <button id="btnClearFile" class="btn-clear" title="Clear selection">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- URL Input Box -->
+                    <div id="urlInputContainer" class="url-container hidden">
+                        <label for="urlInput" class="url-label">Enter Target Web URL / Phishing Link:</label>
+                        <div class="url-input-group">
+                            <span class="url-icon">🌐</span>
+                            <input type="url" id="urlInput" class="url-input" placeholder="https://example.com/login" aria-label="Web URL input">
+                        </div>
+                        <div class="url-hint">Agent will download the live DOM under anti-SSRF sandbox bounds.</div>
+                    </div>
+
+                    <!-- Primary Action Button -->
+                    <button id="btnRunInvestigation" class="btn-primary" disabled>
+                        <span class="btn-icon-run">⚡</span>
+                        <span id="btnRunText">Run Investigation</span>
+                    </button>
+                </div>
+
+                <!-- Vertical Pipeline Stepper -->
+                <div class="panel-card stepper-card" id="stepperCard">
+                    <div class="card-header">
+                        <span class="card-title">INVESTIGATION PIPELINE</span>
+                        <span class="stepper-status" id="stepperStatusText">Idle</span>
+                    </div>
+
+                    <div class="stepper-list" id="stepperList">
+                        <!-- Node 1 -->
+                        <div class="stepper-row" id="step-intake_safety" data-node="intake_safety">
+                            <span class="step-glyph">[ ]</span>
+                            <div class="step-text">
+                                <div class="step-name">Intake &amp; Safety</div>
+                                <div class="step-sub">Anti-evasion &amp; format verification</div>
+                            </div>
+                        </div>
+
+                        <!-- Node 2 -->
+                        <div class="stepper-row" id="step-feature_extraction" data-node="feature_extraction">
+                            <span class="step-glyph">[ ]</span>
+                            <div class="step-text">
+                                <div class="step-name">Feature Extraction</div>
+                                <div class="step-sub">Format-specific structural telemetry</div>
+                            </div>
+                        </div>
+
+                        <!-- Node 3 -->
+                        <div class="stepper-row" id="step-ml_ensemble" data-node="ml_ensemble">
+                            <span class="step-glyph">[ ]</span>
+                            <div class="step-text">
+                                <div class="step-name">ML Consensus</div>
+                                <div class="step-sub">5-model voting consensus</div>
+                            </div>
+                        </div>
+
+                        <!-- Node 4 -->
+                        <div class="stepper-row" id="step-explainability" data-node="explainability">
+                            <span class="step-glyph">[ ]</span>
+                            <div class="step-text">
+                                <div class="step-name">Explainability</div>
+                                <div class="step-sub">Z-score normalized risk drivers</div>
+                            </div>
+                        </div>
+
+                        <!-- Node 5 -->
+                        <div class="stepper-row" id="step-deep_threat_analysis" data-node="deep_threat_analysis">
+                            <span class="step-glyph">[ ]</span>
+                            <div class="step-text">
+                                <div class="step-name">Deep Forensics</div>
+                                <div class="step-sub">Static payload &amp; macro inspection</div>
+                            </div>
+                        </div>
+
+                        <!-- Node 6 -->
+                        <div class="stepper-row" id="step-mitre_mapping" data-node="mitre_mapping">
+                            <span class="step-glyph">[ ]</span>
+                            <div class="step-text">
+                                <div class="step-name">MITRE &amp; SOAR</div>
+                                <div class="step-sub">Technique mapping &amp; response actions</div>
+                            </div>
+                        </div>
+
+                        <!-- Node 7 -->
+                        <div class="stepper-row" id="step-soc_report" data-node="soc_report">
+                            <span class="step-glyph">[ ]</span>
+                            <div class="step-text">
+                                <div class="step-name">SOC Report</div>
+                                <div class="step-sub">Incident report markdown synthesis</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Metadata Card -->
+                <div class="panel-card metadata-card hidden" id="metadataCard">
+                    <div class="card-header">
+                        <span class="card-title">ARTIFACT METADATA</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">Format:</span>
+                        <span class="meta-value" id="metaFormat">-</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">File Size:</span>
+                        <span class="meta-value" id="metaSize">-</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">SHA-256:</span>
+                        <span class="meta-value font-mono copyable" id="metaSha256" title="Click to copy">-</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">MD5:</span>
+                        <span class="meta-value font-mono copyable" id="metaMd5" title="Click to copy">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Evidence & Intelligence Suite -->
+            <section class="evidence-panel" id="evidencePanel">
+                <!-- Hero Executive Verdict Banner -->
+                <div class="verdict-banner banner-neutral" id="verdictBanner">
+                    <div class="verdict-banner-top">
+                        <div class="verdict-label-group">
+                            <span class="verdict-subheading">EXECUTIVE TRIAGE VERDICT</span>
+                            <div class="verdict-title-row">
+                                <span class="verdict-badge" id="verdictBadge">AWAITING DOCUMENT</span>
+                                <span class="threat-severity-badge" id="threatSeverityBadge">IDLE</span>
+                            </div>
+                        </div>
+                        <div class="confidence-group">
+                            <div class="conf-labels">
+                                <span class="conf-title">ENSEMBLE CONFIDENCE</span>
+                                <span class="conf-pct" id="confPercentage">0.0%</span>
+                            </div>
+                            <div class="conf-progress-track">
+                                <div class="conf-progress-fill" id="confProgressFill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="verdict-banner-bottom">
+                        <div class="action-icon">💡</div>
+                        <div class="action-content">
+                            <span class="action-heading">PRESCRIPTIVE SOAR PLAYBOOK ACTION:</span>
+                            <span class="action-text" id="actionText">Select a document or input a live URL to begin autonomous triage.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Evidence Tabs Container -->
+                <div class="evidence-tabs-card" id="evidenceTabsCard">
+                    <!-- Tab Navigation Buttons -->
+                    <div class="tabs-nav-bar" role="tablist">
+                        <button class="nav-tab active" id="tabBtnOverview" data-tab="overview" role="tab" aria-selected="true">
+                            <span>📋</span> Overview &amp; Rules
+                        </button>
+                        <button class="nav-tab" id="tabBtnModels" data-tab="models" role="tab" aria-selected="false">
+                            <span>🤖</span> Model Consensus (5)
+                        </button>
+                        <button class="nav-tab" id="tabBtnXai" data-tab="xai" role="tab" aria-selected="false">
+                            <span>🔍</span> XAI Decision Drivers
+                        </button>
+                        <button class="nav-tab" id="tabBtnForensics" data-tab="forensics" role="tab" aria-selected="false">
+                            <span>🔬</span> Deep Forensics &amp; IOCs
+                        </button>
+                        <button class="nav-tab" id="tabBtnMitre" data-tab="mitre" role="tab" aria-selected="false">
+                            <span>🎯</span> MITRE ATT&amp;CK &amp; SOAR
+                        </button>
+                        <button class="nav-tab" id="tabBtnReport" data-tab="report" role="tab" aria-selected="false">
+                            <span>📑</span> Incident Report
+                        </button>
+                    </div>
+
+                    <!-- Tab Content Panes -->
+                    <div class="tab-panes-wrapper">
+                        <!-- Pane 1: Overview & Applied Rules -->
+                        <div class="tab-pane active" id="paneOverview" role="tabpanel">
+                            <div class="pane-section">
+                                <h3 class="pane-title">Executive Summary</h3>
+                                <p class="summary-text" id="overviewSummaryText">No investigation executed yet.</p>
+                            </div>
+
+                            <div class="pane-section">
+                                <h3 class="pane-title">Autonomous Investigation Rules Evaluated</h3>
+                                <div class="table-container">
+                                    <table class="data-table" id="tableAppliedRules">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 25%;">Investigation Stage</th>
+                                                <th>Trigger &amp; Operational Rule Evaluation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbodyAppliedRules">
+                                            <tr><td colspan="2" class="empty-state">No rules evaluated yet.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pane 2: Multi-Model Consensus -->
+                        <div class="tab-pane" id="paneModels" role="tabpanel">
+                            <div class="pane-section">
+                                <h3 class="pane-title">5-Architecture Voting Consensus Matrix</h3>
+                                <div class="voting-summary-bar" id="votingSummaryBar">
+                                    <span id="voteCountsDisplay">0 Malicious vs 0 Benign</span>
+                                    <span class="consensus-tag" id="consensusTag">Awaiting Data</span>
+                                </div>
+                                <div class="table-container">
+                                    <table class="data-table" id="tableModels">
+                                        <thead>
+                                            <tr>
+                                                <th>Architecture</th>
+                                                <th>Prediction</th>
+                                                <th>Phishing Probability</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbodyModels">
+                                            <tr><td colspan="4" class="empty-state">Run triage to view model consensus.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pane 3: Explainable AI Drivers -->
+                        <div class="tab-pane" id="paneXai" role="tabpanel">
+                            <div class="pane-section">
+                                <h3 class="pane-title">Explainable AI (XAI) — Top Feature Decision Drivers</h3>
+                                <p class="pane-desc">Feature impact computed via standardized training deviations ($z = \frac{x - \mu}{\sigma}$) and model attribution weights.</p>
+                                <div class="table-container">
+                                    <table class="data-table" id="tableXai">
+                                        <thead>
+                                            <tr>
+                                                <th>Feature</th>
+                                                <th>Description</th>
+                                                <th>Raw Value</th>
+                                                <th>Z-Score</th>
+                                                <th>Direction</th>
+                                                <th>Risk Impact</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbodyXai">
+                                            <tr><td colspan="6" class="empty-state">Run triage to compute feature impact.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pane 4: Deep Forensics & IOCs -->
+                        <div class="tab-pane" id="paneForensics" role="tabpanel">
+                            <div class="pane-section">
+                                <h3 class="pane-title">Deep Static Telemetry &amp; Payload Verification</h3>
+                                <div class="forensic-rationale-box hidden" id="forensicRationaleBox">
+                                    <span class="box-icon">ℹ️</span>
+                                    <span id="forensicRationaleText">Rationale notes.</span>
+                                </div>
+                                <ul class="findings-list" id="findingsList">
+                                    <li class="empty-state">No forensic inspection conducted yet.</li>
+                                </ul>
+                            </div>
+
+                            <div class="pane-section">
+                                <h3 class="pane-title">Extracted Indicators of Compromise (IOCs)</h3>
+                                <div class="table-container">
+                                    <table class="data-table" id="tableIocs">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 30%;">IOC Type</th>
+                                                <th>Indicator Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbodyIocs">
+                                            <tr><td colspan="2" class="empty-state">No IOCs extracted.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pane 5: MITRE ATT&CK & SOAR -->
+                        <div class="tab-pane" id="paneMitre" role="tabpanel">
+                            <div class="pane-section">
+                                <h3 class="pane-title">MITRE ATT&amp;CK Threat Matrix Mapping</h3>
+                                <div class="mitre-cards-grid" id="mitreCardsGrid">
+                                    <div class="empty-state-card">No MITRE techniques mapped yet.</div>
+                                </div>
+                            </div>
+
+                            <div class="pane-section">
+                                <h3 class="pane-title">Prescriptive SOAR Incident Response Playbooks</h3>
+                                <div class="table-container">
+                                    <table class="data-table" id="tableSoar">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 20%;">Stage</th>
+                                                <th style="width: 25%;">Action Tier</th>
+                                                <th>Prescribed Operational Mitigation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbodySoar">
+                                            <tr><td colspan="3" class="empty-state">No playbooks generated yet.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pane 6: SOC Incident Response Report -->
+                        <div class="tab-pane" id="paneReport" role="tabpanel">
+                            <div class="pane-section">
+                                <div class="report-header-row">
+                                    <h3 class="pane-title">Executive SOC Incident Response Dossier</h3>
+                                    <div class="report-actions">
+                                        <button id="btnCopyReport" class="btn-secondary btn-sm">📋 Copy Markdown</button>
+                                        <button id="btnDownloadReport" class="btn-secondary btn-sm">💾 Download .md</button>
+                                    </div>
+                                </div>
+                                <div class="report-markdown-viewer" id="reportViewer">
+                                    <p class="empty-state">Report will be automatically compiled upon triage completion.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Global Loading Toast -->
+    <div id="toastNotification" class="toast-notification hidden">
+        <span id="toastIcon">ℹ️</span>
+        <span id="toastMessage">Notification message</span>
+    </div>
+
+    <!-- Application Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
