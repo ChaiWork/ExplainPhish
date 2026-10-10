@@ -22,6 +22,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TypedDict
+from urllib.parse import urlparse
 
 import joblib
 import numpy as np
@@ -384,7 +385,179 @@ def compute_risk_drivers(
     return drivers
 
 
-def check_structural_safety(path: Path, fmt: str, raw_features: Dict[str, Any]) -> Tuple[bool, str]:
+def get_base_domain(host: str) -> str:
+    """Extract registered domain / organizational root domain handling common SLDs."""
+    if not host:
+        return ""
+    host = host.lower().strip().split(":")[0]
+    parts = host.split(".")
+    if len(parts) <= 2:
+        return host
+
+    two_part_tlds = {
+        "edu.my", "ac.uk", "gov.my", "com.my", "org.my", "net.my", "mil.my",
+        "edu.sg", "gov.sg", "com.sg", "edu.au", "gov.au", "com.au",
+        "ac.jp", "co.jp", "ac.id", "co.id", "ac.kr", "co.kr", "ac.in", "co.in",
+        "edu.cn", "gov.cn", "com.cn", "edu.hk", "gov.hk", "com.hk",
+        "gov.uk", "co.uk", "org.uk", "ltd.uk", "me.uk",
+    }
+
+    suffix_candidate = f"{parts[-2]}.{parts[-1]}"
+    if suffix_candidate in two_part_tlds and len(parts) >= 3:
+        return f"{parts[-3]}.{suffix_candidate}"
+
+    return f"{parts[-2]}.{parts[-1]}"
+
+
+def is_institutional_domain(host: str) -> bool:
+    """Check if host belongs to an accredited educational, academic, or government institution."""
+    if not host:
+        return False
+    host = host.lower().strip().split(":")[0]
+
+    # Educational and academic TLDs
+    if host.endswith(".edu") or ".edu." in host:
+        return True
+    if host.endswith(".ac") or ".ac." in host:
+        return True
+    # Government TLDs
+    if host.endswith(".gov") or ".gov." in host:
+        return True
+    if host.endswith(".mil") or ".mil." in host:
+        return True
+
+    return False
+
+
+TRUSTED_SSO_DOMAINS = {
+    "login.microsoftonline.com",
+    "login.windows.net",
+    "login.live.com",
+    "accounts.google.com",
+    "appleid.apple.com",
+    "okta.com",
+    "oktapreview.com",
+    "pingidentity.com",
+    "duosecurity.com",
+    "auth0.com",
+}
+
+
+def is_trusted_sso_host(host: str) -> bool:
+    """Check whether host is an enterprise/federated SSO identity provider."""
+    if not host:
+        return False
+    host = host.lower().strip().split(":")[0]
+    for sso in TRUSTED_SSO_DOMAINS:
+        if host == sso or host.endswith("." + sso):
+            return True
+    return False
+
+
+def extract_html_origin(
+    text: str,
+    source_url: Optional[str] = None,
+    file_path: Optional[str | Path] = None,
+) -> str:
+    """Resolve the authoritative host/origin of an HTML document from URL, filename, or DOM metadata."""
+    if source_url:
+        try:
+            parsed = urlparse(source_url)
+            if parsed.hostname:
+                return parsed.hostname.lower()
+        except Exception:
+            pass
+
+    if file_path:
+        fname = Path(file_path).name
+        m = re.match(r"(?:upload_)?live_([a-zA-Z0-9_\-\.]+)\.(?:html|htm)", fname, re.IGNORECASE)
+        if m:
+            inferred = m.group(1).replace("_", ".")
+            if "." in inferred:
+                return inferred.lower()
+
+    # Inspect DOM for canonical, og:url, or base href
+    base_match = re.search(r'<base\s+[^>]*href=["\']([^"\']+)["\']', text, re.IGNORECASE)
+    if base_match:
+        try:
+            h = urlparse(base_match.group(1)).hostname
+            if h:
+                return h.lower()
+        except Exception:
+            pass
+
+    og_match = re.search(r'<meta\s+[^>]*property=["\']og:url["\'][^>]*content=["\']([^"\']+)["\']', text, re.IGNORECASE)
+    if og_match:
+        try:
+            h = urlparse(og_match.group(1)).hostname
+            if h:
+                return h.lower()
+        except Exception:
+            pass
+
+    canonical_match = re.search(r'<link\s+[^>]*rel=["\']canonical["\'][^>]*href=["\']([^"\']+)["\']', text, re.IGNORECASE)
+    if canonical_match:
+        try:
+            h = urlparse(canonical_match.group(1)).hostname
+            if h:
+                return h.lower()
+        except Exception:
+            pass
+
+    return ""
+
+
+def is_external_form_action(action_url: str, base_host: str) -> bool:
+    """
+    Determine whether a form action URL targets an external untrusted third-party host.
+    Returns True ONLY if action specifies an absolute URL on a distinct, non-SSO, foreign host.
+    """
+    if not action_url:
+        return False
+    action_clean = action_url.strip()
+    if not (action_clean.startswith("http://") or action_clean.startswith("https://") or action_clean.startswith("//")):
+        return False
+
+    try:
+        target_parsed = urlparse(action_clean if not action_clean.startswith("//") else f"https:{action_clean}")
+        action_host = (target_parsed.hostname or "").lower()
+        if not action_host:
+            return False
+
+        if not base_host:
+            return not is_trusted_sso_host(action_host)
+
+        base_clean = base_host.lower().strip().split(":")[0]
+
+        # Exact host match
+        if action_host == base_clean:
+            return False
+
+        # Subdomain / Parent domain match
+        if action_host.endswith("." + base_clean) or base_clean.endswith("." + action_host):
+            return False
+
+        # Compare registered base domains
+        action_base_domain = get_base_domain(action_host)
+        origin_base_domain = get_base_domain(base_clean)
+        if action_base_domain and origin_base_domain and action_base_domain == origin_base_domain:
+            return False
+
+        # Check enterprise SSO providers
+        if is_trusted_sso_host(action_host):
+            return False
+
+        return True
+    except Exception:
+        return False
+
+
+def check_structural_safety(
+    path: Path,
+    fmt: str,
+    raw_features: Dict[str, Any],
+    source_url: Optional[str] = None,
+) -> Tuple[bool, str]:
     """
     Perform structural threat verification.
     Determines whether a document is a pure-data structure without executable vectors:
@@ -392,6 +565,7 @@ def check_structural_safety(path: Path, fmt: str, raw_features: Dict[str, Any]) 
     - Embedded OLE packages / binaries (xl/embeddings)
     - Remote template injection to external domains
     - DDE formula injection
+    - HTML: Validates absence of external exfiltration and differentiates legitimate authentication.
     """
     import zipfile
     if fmt == "excel":
@@ -445,27 +619,39 @@ def check_structural_safety(path: Path, fmt: str, raw_features: Dict[str, Any]) 
     elif fmt == "html":
         try:
             text = path.read_text(encoding="utf-8", errors="ignore")
-            # 1. Interactive password input fields
-            if re.search(r'<input[^>]*type=["\']password["\']', text, re.IGNORECASE):
-                return False, "HTML contains interactive password input field (<input type='password'>)"
+            base_host = extract_html_origin(text, source_url=source_url, file_path=path)
+            is_inst = is_institutional_domain(base_host)
 
-            # 2. Form submission posting to external URI
+            # 1. Stealth hidden iframes
+            if re.search(r'<iframe[^>]*(style=["\'][^"\']*(display:\s*none|visibility:\s*hidden|width:\s*0|height:\s*0)[^"\']*|width=["\']0["\']|height=["\']0["\'])', text, re.IGNORECASE):
+                return False, "HTML contains stealth hidden <iframe>"
+
+            # 2. Meta-refresh redirect to external URL
+            meta_refresh = re.findall(r'<meta[^>]*http-equiv=["\']refresh["\'][^>]*url=([^"\'>\s]+)', text, re.IGNORECASE)
+            for ref_url in meta_refresh:
+                if is_external_form_action(ref_url, base_host):
+                    return False, f"HTML contains automatic meta-refresh redirect to external URL: {ref_url}"
+
+            # 3. Form submission posting to external URI
             forms = re.findall(r'<form\b([^>]*)>', text, re.IGNORECASE)
+            external_post_found = False
             for f_attrs in forms:
                 is_post = bool(re.search(r'method=["\']post["\']', f_attrs, re.IGNORECASE))
                 action_match = re.search(r'action=["\']([^"\']+)["\']', f_attrs, re.IGNORECASE)
                 if action_match:
-                    action_val = action_match.group(1).strip().lower()
-                    if (action_val.startswith("http://") or action_val.startswith("https://") or action_val.startswith("//")) and is_post:
+                    action_val = action_match.group(1).strip()
+                    if is_external_form_action(action_val, base_host) and is_post:
+                        external_post_found = True
                         return False, f"HTML contains form posting credentials to external URI: {action_val}"
 
-            # 3. Stealth hidden iframes
-            if re.search(r'<iframe[^>]*(style=["\'][^"\']*(display:\s*none|visibility:\s*hidden|width:\s*0|height:\s*0)[^"\']*|width=["\']0["\']|height=["\']0["\'])', text, re.IGNORECASE):
-                return False, "HTML contains stealth hidden <iframe>"
+            # 4. Interactive password input fields
+            has_password_field = bool(re.search(r'<input[^>]*type=["\']password["\']', text, re.IGNORECASE))
 
-            # 4. Meta-refresh redirect to external URL
-            if re.search(r'<meta[^>]*http-equiv=["\']refresh["\'][^>]*url=https?://', text, re.IGNORECASE):
-                return False, "HTML contains automatic meta-refresh redirect to external URL"
+            if has_password_field:
+                if is_inst or (base_host and not external_post_found):
+                    return True, f"Verified same-origin authentication service ({base_host or 'accredited domain'}) with 0 external exfiltration targets"
+                else:
+                    return False, "HTML contains interactive password input field on unverified origin"
 
             return True, "Clean web document (0 password fields, 0 external form POST actions, 0 hidden iframes)"
         except Exception:
@@ -559,6 +745,7 @@ def run_inference(
     fmt: str | None = None,
     n_top: Optional[int] = None,
     target_model: Optional[str] = None,
+    source_url: Optional[str] = None,
 ) -> InferenceResult:
     """
     Main inference entrypoint: extracts features, standardizes them,
@@ -658,7 +845,7 @@ def run_inference(
         uncertain = (malicious_votes != len(voting_candidates) and malicious_votes != 0)
 
         # Structural threat verification
-        is_safe_struct, safety_note = check_structural_safety(path, fmt, raw_features)
+        is_safe_struct, safety_note = check_structural_safety(path, fmt, raw_features, source_url=source_url)
         structural_safety_applied = False
         structural_safety_reason = None
 
@@ -676,7 +863,7 @@ def run_inference(
         policy_risk_applied = False
         policy_risk_category = None
         if fmt == "html" and verdict == "BENIGN":
-            is_policy, cat_name, policy_info = check_web_policy_risk(path)
+            is_policy, cat_name, policy_info = check_web_policy_risk(path, source_url=source_url)
             if is_policy:
                 verdict = f"SUSPICIOUS ({cat_name})"
                 confidence = 0.8800

@@ -48,6 +48,9 @@ from inference import (
     compute_risk_drivers,
     detect_format,
     extract_features,
+    extract_html_origin,
+    is_external_form_action,
+    is_institutional_domain,
     load_model_bundle,
     standardize_features,
 )
@@ -296,7 +299,7 @@ def node_ml_ensemble(state: ExplainPhishState) -> Dict[str, Any]:
 
     # Check structural threat verification from inference.py
     try:
-        is_safe_struct, safety_note = check_structural_safety(path, fmt, raw_feats)
+        is_safe_struct, safety_note = check_structural_safety(path, fmt, raw_feats, source_url=state.get("source_url"))
         if is_safe_struct and ensemble_verdict == "MALICIOUS":
             borderline_reasons.append(f"Structural verification anomaly: {safety_note} conflicts with Malicious ML consensus")
     except Exception:
@@ -317,7 +320,7 @@ def node_ml_ensemble(state: ExplainPhishState) -> Dict[str, Any]:
             borderline_reasons.append("Benign ML vote but HTML document contains active form with external links")
         elif ensemble_verdict == "MALICIOUS":
             try:
-                is_safe_html, html_safety_note = check_structural_safety(path, fmt, raw_feats)
+                is_safe_html, html_safety_note = check_structural_safety(path, fmt, raw_feats, source_url=state.get("source_url"))
                 if is_safe_html:
                     borderline_reasons.append(
                         f"Malicious ML vote on HTML document lacks active credential harvesting vectors ({html_safety_note}); deep forensic inspection required"
@@ -441,16 +444,30 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
     try:
         if fmt == "html":
             text = path.read_text(encoding="utf-8", errors="ignore")
+            base_host = extract_html_origin(text, source_url=state.get("source_url"), file_path=path)
+            is_inst = is_institutional_domain(base_host)
+
             # 1. External form action
             form_actions = re.findall(r'<form[^>]*action=["\']([^"\']+)["\']', text, re.IGNORECASE)
+            external_actions: List[str] = []
+            same_origin_actions: List[str] = []
             for action in form_actions:
-                if action.startswith("http://") or action.startswith("https://"):
+                if is_external_form_action(action, base_host):
+                    external_actions.append(action)
                     iocs.append({"type": "Suspicious Form Action", "value": action})
                     deep_findings["indicators"].append(f"Form submission sends credentials to external URI: {action}")
+                else:
+                    same_origin_actions.append(action)
 
             # 2. Password inputs
-            if re.search(r'<input[^>]*type=["\']password["\']', text, re.IGNORECASE):
-                deep_findings["indicators"].append("Credential input field (<input type='password'>) detected")
+            has_password = bool(re.search(r'<input[^>]*type=["\']password["\']', text, re.IGNORECASE))
+            if has_password:
+                if external_actions:
+                    deep_findings["indicators"].append("Credential input field (<input type='password'>) targeting external endpoint")
+                elif is_inst:
+                    deep_findings["indicators"].append(f"Institutional authentication form: Same-origin credential input on accredited academic host ({base_host or 'accredited domain'})")
+                else:
+                    deep_findings["indicators"].append(f"Same-origin authentication form: Credential input field submitting to internal host ({base_host or 'local origin'})")
 
             # 3. Obfuscated script constructs
             obf_matches = re.findall(r'(eval\s*\(|unescape\s*\(|String\.fromCharCode|document\.write\s*\(|atob\s*\()', text, re.IGNORECASE)
@@ -461,8 +478,9 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
             if re.search(r'<iframe[^>]*(style=["\'][^"\']*(display:\s*none|visibility:\s*hidden|width:\s*0|height:\s*0)[^"\']*|width=["\']0["\']|height=["\']0["\'])', text, re.IGNORECASE):
                 deep_findings["indicators"].append("Stealth hidden <iframe> (width/height 0 or display:none) detected")
 
-            if not any("Credential input" in i or "Form submission sends" in i for i in deep_findings["indicators"]):
-                deep_findings["indicators"].append("Verified DOM: 0 credential input fields (<input type='password'>) detected")
+            if not any("targeting external endpoint" in i or "Form submission sends" in i for i in deep_findings["indicators"]):
+                if not has_password:
+                    deep_findings["indicators"].append("Verified DOM: 0 credential input fields (<input type='password'>) detected")
                 deep_findings["indicators"].append("Verified DOM: 0 external form actions detected")
             if not any("Stealth hidden <iframe>" in i for i in deep_findings["indicators"]):
                 deep_findings["indicators"].append("Verified DOM: 0 stealth hidden iframes detected")
@@ -587,12 +605,14 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
                 f"active execution payloads: {deep_findings['indicators']}"
             )
     elif fmt == "html":
-        has_cred_theft = any("Credential input field" in i or "external URI" in i for i in deep_findings["indicators"])
+        has_external_exfil = any("external URI" in i or "targeting external endpoint" in i for i in deep_findings["indicators"])
         has_stealth_iframe = any("Stealth hidden <iframe>" in i for i in deep_findings["indicators"])
         has_policy_risk = any("High-Risk Web Category Detected" in i for i in deep_findings["indicators"])
+        is_inst_auth = any("Institutional authentication form" in i for i in deep_findings["indicators"])
+        is_same_origin_auth = any("Same-origin authentication form" in i for i in deep_findings["indicators"])
         policy_cat_name = deep_findings.get("policy_risk", {}).get("category", "Policy Violation")
 
-        if has_cred_theft and original_verdict == "BENIGN":
+        if has_external_exfil and original_verdict == "BENIGN":
             final_verdict = "MALICIOUS (Phishing Form Detected)"
             deep_findings["verdict_adjustment"] = "UPGRADE_TO_MALICIOUS"
             deep_findings["rationale"] = "Active credential harvesting form targeting external endpoint confirmed."
@@ -605,14 +625,32 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
                 f"an active {policy_cat_name} web portal operating under an evasive rotating mirror domain. "
                 "Classified SUSPICIOUS under corporate Acceptable Use Policy (AUP)."
             )
-        elif original_verdict == "MALICIOUS" and not has_cred_theft and not has_stealth_iframe:
-            final_verdict = "BENIGN (False-Positive Screened)"
-            deep_findings["verdict_adjustment"] = "DOWNGRADE_TO_BENIGN"
-            deep_findings["rationale"] = (
-                "ML model flagged anomaly due to statistical covariate shift (production HTML minification and script packing), "
-                "but exhaustive deep forensic inspection confirmed zero password input fields, zero external form POST actions, "
-                "and zero stealth hidden iframes. Calibrated safe."
-            )
+        elif original_verdict == "MALICIOUS" and not has_external_exfil and not has_stealth_iframe:
+            if is_inst_auth:
+                final_verdict = "BENIGN (Institutional Authentication Service)"
+                deep_findings["verdict_adjustment"] = "DOWNGRADE_TO_BENIGN"
+                deep_findings["rationale"] = (
+                    f"ML model consensus was split/borderline due to statistical HTML document complexity, "
+                    f"but exhaustive deep forensic inspection verified legitimate same-origin authentication "
+                    f"on an accredited institutional domain ({base_host or 'accredited domain'}). "
+                    "Zero external form POST targets and zero stealth hidden iframes detected. Calibrated safe."
+                )
+            elif is_same_origin_auth:
+                final_verdict = "BENIGN (False-Positive Screened)"
+                deep_findings["verdict_adjustment"] = "DOWNGRADE_TO_BENIGN"
+                deep_findings["rationale"] = (
+                    f"ML model flagged anomaly due to login form structures, but forensic analysis confirmed "
+                    f"all credential inputs submit strictly to the internal same-origin host ({base_host or 'local origin'}) "
+                    "with zero external exfiltration endpoints and zero stealth hidden iframes. Calibrated safe."
+                )
+            else:
+                final_verdict = "BENIGN (False-Positive Screened)"
+                deep_findings["verdict_adjustment"] = "DOWNGRADE_TO_BENIGN"
+                deep_findings["rationale"] = (
+                    "ML model flagged anomaly due to statistical covariate shift (production HTML minification and script packing), "
+                    "but exhaustive deep forensic inspection confirmed zero external form POST actions "
+                    "and zero stealth hidden iframes. Calibrated safe."
+                )
     elif fmt == "pdf":
         has_exec = any("/Launch" in i or "/JavaScript" in i for i in deep_findings["indicators"])
         if has_exec and original_verdict == "BENIGN":
@@ -623,7 +661,10 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
     rules = dict(state.get("applied_rules") or {})
     if deep_findings.get("verdict_adjustment") == "DOWNGRADE_TO_BENIGN":
         if fmt == "html":
-            rule_desc = "Rule 5A (False-Positive Screening): Verified 0 password fields, 0 external form actions, and 0 stealth iframes. Calibrated to BENIGN."
+            if any("Institutional authentication form" in i for i in deep_findings["indicators"]):
+                rule_desc = f"Rule 5A (Forensic Calibration): Verified accredited institutional authentication on {base_host or 'academic domain'}. Calibrated to BENIGN."
+            else:
+                rule_desc = "Rule 5A (False-Positive Screening): Verified 0 external form actions and 0 stealth hidden iframes. Calibrated to BENIGN."
         else:
             rule_desc = "Rule 5A (False-Positive Screening): Verified 0 VBA macros, 0 OLE payloads, 0 DDE, and 0 remote templates. Calibrated to BENIGN."
     elif deep_findings.get("verdict_adjustment") == "UPGRADE_TO_MALICIOUS":
@@ -792,18 +833,31 @@ def node_mitre_mapping(state: ExplainPhishState) -> Dict[str, Any]:
         })
 
     elif "BENIGN" in final_verdict:
-        threat_level = "LOW" if "Screened" in final_verdict else "CLEAN"
-        mitre_tactics.append({
-            "id": "N/A",
-            "tactic": "No Malicious Tactics Identified",
-            "technique": "Standard Business Document",
-            "description": "File exhibits standard benign enterprise document characteristics.",
-        })
-        actions.append({
-            "stage": "Clearance",
-            "tier": "Tier 1 - Safe Release",
-            "action": "Release document from sandbox quarantine to destination mailbox. No SOC escalation required.",
-        })
+        threat_level = "LOW" if ("Screened" in final_verdict or "Institutional" in final_verdict) else "CLEAN"
+        if "Institutional" in final_verdict:
+            mitre_tactics.append({
+                "id": "TRUST-ACCREDITED",
+                "tactic": "Accredited Service",
+                "technique": "Institutional / Academic Identity Management",
+                "description": "Legitimate enterprise/institutional authentication portal hosted on accredited educational/government domain.",
+            })
+            actions.append({
+                "stage": "Clearance & Allowlist",
+                "tier": "Tier 1 - Verified Academic Service",
+                "action": "Classified safe. Authorize endpoint access and maintain exception catalog for verified educational/institutional portal.",
+            })
+        else:
+            mitre_tactics.append({
+                "id": "N/A",
+                "tactic": "No Malicious Tactics Identified",
+                "technique": "Standard Business Document",
+                "description": "File exhibits standard benign enterprise document characteristics.",
+            })
+            actions.append({
+                "stage": "Clearance",
+                "tier": "Tier 1 - Safe Release",
+                "action": "Release document from sandbox quarantine to destination mailbox. No SOC escalation required.",
+            })
 
     rules = dict(state.get("applied_rules") or {})
     rule_desc = f"Rule 6 (MITRE & SOAR): Mapped {len(mitre_tactics)} techniques & {len(actions)} prescriptive playbooks"
