@@ -31,8 +31,10 @@
     "max_depth": 16
   },
   "test_metrics": {
-    "roc_auc": 0.9806,
-    "accuracy": 0.9314,
-    "f1": 0.9307
-  }
+    "roc_auc": 0.982,
+    "accuracy": 0.9312,
+    "f1": 0.9316
+  },
+  "hard_negatives_augmented": true,
+  "hard_negatives_count": 400
 }
