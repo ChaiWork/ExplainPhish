@@ -36,3 +36,5 @@ downloads/
 # Generated SOC analysis reports
 InterfaceExplainPhish/reports/
 reports/
+retrain_hard_negatives.py
+googleCollab/data/html/hard_negatives
