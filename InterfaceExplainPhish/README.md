@@ -146,6 +146,39 @@ Checks:
 
 ---
 
+## Automated Web API Test Suite (pytest)
+
+Run the full integration test suite validating FastAPI routes, security controls, anti-SSRF protections, and schema sanitization:
+
+```bash
+python3 -m pytest tests/test_web_api.py -v
+```
+
+---
+
+## 🐳 Docker Deployment & Container Sandbox
+
+ExplainPhish is containerized for zero-dependency team onboarding and isolated malware/phishing document inspection:
+
+### 1. Start Web SOC Workstation (One-Command)
+```bash
+docker compose up --build
+```
+Access the interactive console at **http://localhost:8080**.
+
+### 2. Run Test Suite Inside Container
+```bash
+docker compose run --rm test
+```
+
+### 3. Stop Services
+```bash
+docker compose down
+```
+
+* **Security Sandbox:** The container runs as an unprivileged user (`appuser:1000`), protecting host systems when analyzing potentially malicious payloads.
+* **Volume Persistence:** Uploaded files and generated SOC Markdown reports are persisted to `./InterfaceExplainPhish/downloads` and `./InterfaceExplainPhish/reports`.
+
 ## Security Controls (base.py)
 
 | Guard | Limit |

@@ -353,9 +353,14 @@ def sanitize_result(res: Dict[str, Any]) -> Dict[str, Any]:
     """Ensure JSON serializability (convert numpy floats and sanitize keys)."""
     out = {}
     for k, v in res.items():
-        if k in ("raw_features", "standardized_features"):
-            # Include serialized floats
-            out[k] = {str(fk): float(fv) if isinstance(fv, (int, float)) else str(fv) for fk, fv in v.items()}
+        if k in ("raw_features", "standardized_features") and isinstance(v, dict):
+            clean_dict = {}
+            for fk, fv in v.items():
+                try:
+                    clean_dict[str(fk)] = float(fv)
+                except (ValueError, TypeError):
+                    clean_dict[str(fk)] = str(fv)
+            out[k] = clean_dict
         else:
             out[k] = v
     return out

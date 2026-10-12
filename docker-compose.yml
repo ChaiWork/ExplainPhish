@@ -1,0 +1,45 @@
+# =============================================================================
+# ExplainPhish Autonomous SOC Workstation — Docker Compose Configuration
+# One-command orchestration for development, evaluation, and production
+# =============================================================================
+
+services:
+  # Primary Web Application & SOC Workstation Service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: explainphish-web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Persist downloaded web assets and generated SOC Incident Response Markdown reports
+      - ./InterfaceExplainPhish/downloads:/app/InterfaceExplainPhish/downloads
+      - ./InterfaceExplainPhish/reports:/app/InterfaceExplainPhish/reports
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+
+  # Automated Test Runner Service (pytest in identical container environment)
+  # Run via: docker compose run --rm test
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: explainphish-test-runner
+    profiles:
+      - test
+    command: ["pytest", "tests/test_web_api.py", "-v"]
+    environment:
+      - PYTHONUNBUFFERED=1

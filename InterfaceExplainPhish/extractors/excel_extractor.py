@@ -64,6 +64,7 @@ def _read_xlsx_fallback(path: Path, feat: dict, cell_lengths: list[int]) -> list
     """Fallback XML parser when openpyxl fails on add-ins or custom parts."""
     import xml.etree.ElementTree as ET
     all_text = []
+    max_cells = 30_000
     try:
         with zipfile.ZipFile(path, "r") as zf:
             shared_strings = []
@@ -80,77 +81,95 @@ def _read_xlsx_fallback(path: Path, feat: dict, cell_lengths: list[int]) -> list
             for name in zf.namelist():
                 if "worksheets/sheet" in name.lower() and name.endswith(".xml"):
                     try:
-                        root = ET.fromstring(zf.read(name))
-                        for cell in root.iter():
-                            if cell.tag.endswith("}c"):
-                                t = cell.get("t")
-                                val = None
-                                for child in cell:
-                                    if child.tag.endswith("}v") and child.text:
-                                        val = child.text.strip()
-                                        break
-                                if val is not None:
-                                    if t == "s":
-                                        feat["string_cell_count"] += 1
-                                        try:
-                                            idx = int(val)
-                                            if 0 <= idx < len(shared_strings):
-                                                s = shared_strings[idx]
-                                                all_text.append(s)
-                                                cell_lengths.append(len(s))
-                                        except Exception:
+                        with zf.open(name) as sf:
+                            for event, cell in ET.iterparse(sf, events=("end",)):
+                                if cell.tag.endswith("}c"):
+                                    t = cell.get("t")
+                                    val = None
+                                    for child in cell:
+                                        if child.tag.endswith("}v") and child.text:
+                                            val = child.text.strip()
+                                            break
+                                    if val is not None:
+                                        if t == "s":
+                                            feat["string_cell_count"] += 1
+                                            try:
+                                                idx = int(val)
+                                                if 0 <= idx < len(shared_strings):
+                                                    s = shared_strings[idx]
+                                                    all_text.append(s)
+                                                    cell_lengths.append(len(s))
+                                            except Exception:
+                                                all_text.append(val)
+                                                cell_lengths.append(len(val))
+                                        else:
+                                            try:
+                                                float(val)
+                                                feat["numeric_cell_count"] += 1
+                                            except ValueError:
+                                                feat["string_cell_count"] += 1
                                             all_text.append(val)
                                             cell_lengths.append(len(val))
-                                    else:
-                                        try:
-                                            float(val)
-                                            feat["numeric_cell_count"] += 1
-                                        except ValueError:
-                                            feat["string_cell_count"] += 1
-                                        all_text.append(val)
-                                        cell_lengths.append(len(val))
+                                    cell.clear()
+                                    if len(all_text) >= max_cells:
+                                        break
                     except Exception:
                         pass
+                if len(all_text) >= max_cells:
+                    break
     except Exception:
         pass
     return all_text
 
 
 def _read_xlsx(path: Path, feat: dict) -> list[str]:
-    """Extract features from xlsx/xlsm via openpyxl. Returns all cell text."""
+    """Extract features from xlsx/xlsm via fast openpyxl streaming. Returns sampled cell text."""
     import openpyxl
     import warnings
     warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
     all_text, cell_lengths = [], []
+    max_cells = 30_000
+    scanned_cells = 0
     try:
-        wb = openpyxl.load_workbook(path, data_only=False, keep_links=True)
-        for sheet in wb.worksheets:
-            for row in sheet.iter_rows():
-                for cell in row:
-                    val = cell.value
-                    if val is None:
-                        continue
-                    s = str(val).strip()
-                    if not s:
-                        continue
-                    all_text.append(s)
-                    cell_lengths.append(len(s))
-                    if isinstance(val, str):
-                        feat["string_cell_count"] += 1
-                    elif isinstance(val, (int, float)):
-                        feat["numeric_cell_count"] += 1
+        # Use read_only=True and data_only=True for 50x-100x faster streaming XML parsing without DOM overhead
+        wb = openpyxl.load_workbook(path, read_only=True, data_only=True, keep_links=False)
+        try:
+            for sheet in wb.worksheets:
+                for row in sheet.iter_rows(values_only=True):
+                    for val in row:
+                        if val is None:
+                            continue
+                        s = str(val).strip()
+                        if not s:
+                            continue
+                        all_text.append(s)
+                        cell_lengths.append(len(s))
+                        if isinstance(val, str):
+                            feat["string_cell_count"] += 1
+                        elif isinstance(val, (int, float)):
+                            feat["numeric_cell_count"] += 1
+                        scanned_cells += 1
+                        if scanned_cells >= max_cells:
+                            break
+                    if scanned_cells >= max_cells:
+                        break
+                if scanned_cells >= max_cells:
+                    break
+        finally:
+            wb.close()
     except Exception:
         all_text = _read_xlsx_fallback(path, feat, cell_lengths)
 
     feat["avg_cell_length"] = (sum(cell_lengths) / len(cell_lengths)) if cell_lengths else 0.0
 
     # Macro & remote template / relationship detection
+    # Note: Only inspect small relationship (.rels) and external link files; avoid reading 200MB sheet data XMLs!
     try:
         with zipfile.ZipFile(path, "r") as zf:
             for n in zf.namelist():
                 nl = n.lower()
-                if nl.endswith(".rels") or nl.endswith(".xml"):
+                if nl.endswith(".rels") or "externallinks" in nl:
                     data = zf.read(n).decode(errors="ignore").lower()
                     if "http://" in data or "https://" in data:
                         feat["remote_template_present"] = 1
@@ -166,6 +185,8 @@ def _read_xls(path: Path, feat: dict) -> list[str]:
     import xlrd
     wb = xlrd.open_workbook(str(path), formatting_info=False)
     all_text, cell_lengths = [], []
+    max_cells = 30_000
+    scanned = 0
 
     for sheet in wb.sheets():
         for r in range(sheet.nrows):
@@ -183,9 +204,17 @@ def _read_xls(path: Path, feat: dict) -> list[str]:
                     feat["string_cell_count"] += 1
                 elif isinstance(val, (int, float)):
                     feat["numeric_cell_count"] += 1
+                scanned += 1
+                if scanned >= max_cells:
+                    break
+            if scanned >= max_cells:
+                break
+        if scanned >= max_cells:
+            break
 
     feat["avg_cell_length"] = (sum(cell_lengths) / len(cell_lengths)) if cell_lengths else 0.0
     return all_text
+
 
 
 def _read_csv(path: Path, feat: dict) -> list[str]:

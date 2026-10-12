@@ -1,0 +1,30 @@
+# Version control & OS
+.git
+.gitignore
+.DS_Store
+Thumbs.db
+
+# Python bytecode & test caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor & IDE configs
+.vscode/
+.idea/
+
+# Local virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Development artifacts
+.agents/
+googleCollab/
+*.egg-info/
+dist/
+build/

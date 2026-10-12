@@ -1,0 +1,7 @@
+{
+  "pythonVersion": "3.13",
+  "pythonPath": "/usr/local/bin/python3.13",
+  "extraPaths": [
+    "InterfaceExplainPhish"
+  ]
+}

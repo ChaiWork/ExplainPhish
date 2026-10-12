@@ -99,7 +99,7 @@ def extract(file_path: str | Path) -> dict:
         pass
     if not text:
         try:
-            import PyPDF2
+            import PyPDF2  # type: ignore[import-not-found]
             with open(str(path), "rb") as f:
                 reader = PyPDF2.PdfReader(f, strict=False)
                 for p in reader.pages[:50]:
@@ -114,7 +114,10 @@ def extract(file_path: str | Path) -> dict:
     meta_size = 0
     title_len = 0
     try:
-        import fitz  # PyMuPDF
+        try:
+            import pymupdf as fitz  # type: ignore[import-not-found]
+        except ImportError:
+            import fitz  # type: ignore[import-not-found]
         doc = fitz.open(str(path))
         meta = doc.metadata or {}
         meta_str = " ".join(str(v) for v in meta.values() if v)
@@ -125,7 +128,7 @@ def extract(file_path: str | Path) -> dict:
         pass
     if not meta_size and not title_len:
         try:
-            import PyPDF2
+            import PyPDF2  # type: ignore[import-not-found]
             with open(str(path), "rb") as f:
                 reader = PyPDF2.PdfReader(f, strict=False)
                 meta = reader.metadata

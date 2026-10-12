@@ -622,4 +622,49 @@ python InterfaceExplainPhish\predict.py --dir InterfaceExplainPhish\Sample\eMali
 python InterfaceExplainPhish\predict.py --file InterfaceExplainPhish\Sample\pmalicios_pdf\sample_04623.pdf
 # 3. Check schema parity for any format
 python InterfaceExplainPhish\parity_test.py --format pdf --file InterfaceExplainPhish\Sample\pbenign_pdf\i1040nre.pdf
+
 All 4 notebooks are formatted, updated, and ready for study or presentation to university students and lecturers.
+
+---
+
+## 6. 🐳 Production Docker Deployment & Web SOC Workstation
+
+ExplainPhish is containerized using **Docker** and **Docker Compose**, providing a cross-platform runtime for instant deployment, model version locking, and security sandboxing.
+
+### Why Docker for ExplainPhish?
+1. **Isolated Security Sandbox:** Analyzing untrusted phishing lures and macro-enabled documents inside an unprivileged container (`appuser:1000`) protects the host operating system.
+2. **Zero Training-Serving Skew:** Bundles the exact Python 3.13 runtime, OpenMP multiprocessing libraries, and dependencies required by XGBoost, LightGBM, and LangGraph.
+3. **One-Command Setup:** Teammates, evaluators, and lecturers can run the entire workstation without manually installing Python packages or configuring virtual environments.
+
+### Quick Start Commands
+
+```bash
+# 1. Build and launch the Web SOC Workstation:
+docker compose up --build
+
+# 2. Open the interactive analyst workstation in your browser:
+# http://localhost:8080
+
+# 3. Run the automated 16-test API test suite inside the container:
+docker compose run --rm test
+
+# 4. Stop containers when finished:
+docker compose down
+```
+
+---
+
+## 7. 🧪 Automated Web API Test Suite
+
+The REST API and autonomous pipeline are verified with a 16-test suite covering:
+* **Service Discovery:** `/api/health`, `/api/samples`, and SPA frontend serving.
+* **Triage Pipeline:** Multipart document uploads, 50MB sandbox limit rejection, and sample catalog execution.
+* **Security & Anti-SSRF:** Blocks private/internal network ranges (`127.0.0.1`, `localhost`, `192.168.x.x`, `10.x.x.x`).
+* **Resilience:** Gracefully triages dead/NXDOMAIN domains into incident dossiers instead of failing.
+* **Data Sanitization:** Ensures high-precision NumPy `float32`/`int64` model weights serialize cleanly to JSON.
+
+Run tests locally:
+```bash
+python3 -m pytest tests/test_web_api.py -v
+```
+Detailed test specifications and verification logs are available in [`docs/api-test-documentation.md`](./docs/api-test-documentation.md).

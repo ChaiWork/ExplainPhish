@@ -331,7 +331,7 @@ def compute_risk_drivers(
 
     # 1. Primary: Use SHAP TreeExplainer on Random Forest for non-linear feature attribution
     try:
-        import shap
+        import shap  # type: ignore[import-not-found]
         explainer = bundle.get("_rf_shap_explainer")
         if explainer is None:
             explainer = shap.TreeExplainer(rf)
