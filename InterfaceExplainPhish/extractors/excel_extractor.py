@@ -250,7 +250,7 @@ def _extract_macro_text(path: Path) -> str:
     code = ""
     # Method A: oletools (best)
     try:
-        from oletools.olevba import VBA_Parser
+        from oletools.olevba import VBA_Parser  # type: ignore
         vba = VBA_Parser(str(path))
         if vba.detect_vba_macros():
             parts = []

@@ -27,6 +27,7 @@ xlrd>=2.0.1
 pdfminer.six>=20240706
 pypdf>=4.3.0
 olefile>=0.47
+oletools>=0.60
 
 # Testing & Quality Assurance
 pytest>=8.3.0

@@ -21,7 +21,7 @@ except ImportError:
     from extractors.base import ExtractionError, check_file_safety
 
 try:
-    from oletools.olevba import VBA_Parser
+    from oletools.olevba import VBA_Parser  # type: ignore
     HAVE_OLEVBA = True
 except Exception:
     HAVE_OLEVBA = False
