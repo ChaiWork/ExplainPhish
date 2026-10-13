@@ -4,6 +4,11 @@
  * LangGraph pipeline execution, and interactive evidence visualization.
  */
 
+const API_BASE = window.location.hostname === 'localhost'
+    ? ''
+    : 'https://explainphish-api.onrender.com'; // Your Render backend URL
+
+
 (function () {
     'use strict';
 
@@ -260,7 +265,7 @@
             if (currentMode === 'file') {
                 const formData = new FormData();
                 formData.append('file', selectedFile);
-                resp = await fetch('/api/analyze/file', {
+                esp = await fetch(`${API_BASE}/api/analyze/file`, {
                     method: 'POST',
                     body: formData,
                 });
@@ -270,7 +275,7 @@
                     targetUrl = 'https://' + targetUrl;
                     urlInput.value = targetUrl;
                 }
-                resp = await fetch('/api/analyze/url', {
+                resp = await fetch(`${API_BASE}/api/analyze/url`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: targetUrl }),
@@ -292,7 +297,7 @@
     async function runSampleAnalysis(samplePath) {
         setAnalyzingUI();
         try {
-            const resp = await fetch('/api/analyze/sample', {
+            resp = await fetch(`${API_BASE}/api/analyze/sample`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sample_path: samplePath }),
