@@ -447,7 +447,10 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
             base_host = extract_html_origin(text, source_url=state.get("source_url"), file_path=path)
             is_inst = is_institutional_domain(base_host)
 
-            # 1. External form action
+            # 1. Password inputs & credential vectors
+            has_password = bool(re.search(r'<input[^>]*type=["\']password["\']', text, re.IGNORECASE))
+
+            # 2. External form action
             form_actions = re.findall(r'<form[^>]*action=["\']([^"\']+)["\']', text, re.IGNORECASE)
             external_actions: List[str] = []
             same_origin_actions: List[str] = []
@@ -455,12 +458,13 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
                 if is_external_form_action(action, base_host):
                     external_actions.append(action)
                     iocs.append({"type": "Suspicious Form Action", "value": action})
-                    deep_findings["indicators"].append(f"Form submission sends credentials to external URI: {action}")
+                    if has_password:
+                        deep_findings["indicators"].append(f"Credential harvesting form sends credentials to external URI: {action}")
+                    else:
+                        deep_findings["indicators"].append(f"Form submission targets external URI: {action}")
                 else:
                     same_origin_actions.append(action)
 
-            # 2. Password inputs
-            has_password = bool(re.search(r'<input[^>]*type=["\']password["\']', text, re.IGNORECASE))
             if has_password:
                 if external_actions:
                     deep_findings["indicators"].append("Credential input field (<input type='password'>) targeting external endpoint")
@@ -605,7 +609,7 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
                 f"active execution payloads: {deep_findings['indicators']}"
             )
     elif fmt == "html":
-        has_external_exfil = any("external URI" in i or "targeting external endpoint" in i for i in deep_findings["indicators"])
+        has_external_exfil = any("Credential harvesting form" in i or "targeting external endpoint" in i for i in deep_findings["indicators"])
         has_stealth_iframe = any("Stealth hidden <iframe>" in i for i in deep_findings["indicators"])
         has_policy_risk = any("High-Risk Web Category Detected" in i for i in deep_findings["indicators"])
         is_inst_auth = any("Institutional authentication form" in i for i in deep_findings["indicators"])

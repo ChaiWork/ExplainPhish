@@ -495,14 +495,36 @@ def extract_html_origin(
         except Exception:
             pass
 
-    canonical_match = re.search(r'<link\s+[^>]*rel=["\']canonical["\'][^>]*href=["\']([^"\']+)["\']', text, re.IGNORECASE)
-    if canonical_match:
+    # Inspect favicon / shortcut icon
+    icon_match = re.search(r'<link\s+[^>]*rel=["\'](?:shortcut\s+)?icon["\'][^>]*href=["\']([^"\']+)["\']', text, re.IGNORECASE)
+    if icon_match:
         try:
-            h = urlparse(canonical_match.group(1)).hostname
+            h = urlparse(icon_match.group(1)).hostname
             if h:
                 return h.lower()
         except Exception:
             pass
+
+    # Inspect Moodle/CMS config or script variables (e.g. wwwroot: "https://learning.uum.edu.my...")
+    cms_match = re.search(r'["\'](?:wwwroot|baseUrl|siteUrl)["\']\s*:\s*["\'](https?://[^"\']+)["\']', text, re.IGNORECASE)
+    if cms_match:
+        try:
+            raw_cms_url = cms_match.group(1).replace(r"\/", "/")
+            h = urlparse(raw_cms_url).hostname
+            if h:
+                return h.lower()
+        except Exception:
+            pass
+
+    # Infer origin from dominant internal hostname among absolute links in the document
+    abs_links = re.findall(r'href=["\'](https?://[^"\']+)["\']', text, re.IGNORECASE)
+    if abs_links:
+        from collections import Counter
+        hosts = [urlparse(u).hostname.lower() for u in abs_links if urlparse(u).hostname]
+        if hosts:
+            top_host, count = Counter(hosts).most_common(1)[0]
+            if count >= 3 or len(hosts) <= 3:
+                return top_host
 
     return ""
 

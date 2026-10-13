@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import ssl
 import sys
 import tempfile
 import urllib.request
@@ -154,17 +155,30 @@ def api_analyze_url(req: URLAnalyzeRequest):
     req_obj = urllib.request.Request(
         raw_url,
         headers={
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
         },
     )
 
+    ctx = ssl.create_default_context()
     try:
-        with urllib.request.urlopen(req_obj, timeout=15) as resp:
+        with urllib.request.urlopen(req_obj, timeout=20, context=ctx) as resp:
             content = resp.read(15 * 1024 * 1024)
             content_type = resp.headers.get("Content-Type", "")
+    except ssl.SSLError:
+        try:
+            # Fallback for institutional / educational certificates with intermediate chain issues
+            unverified_ctx = ssl._create_unverified_context()
+            with urllib.request.urlopen(req_obj, timeout=20, context=unverified_ctx) as resp:
+                content = resp.read(15 * 1024 * 1024)
+                content_type = resp.headers.get("Content-Type", "")
+        except Exception as exc:
+            err_msg = str(exc)
+            return generate_inaccessible_domain_triage(raw_url, err_msg)
     except Exception as exc:
         err_msg = str(exc)
-        if any(term in err_msg.lower() for term in ("nodename nor servname", "name or service not known", "getaddrinfo failed", "timed out", "connection refused", "network is unreachable")):
+        if any(term in err_msg.lower() for term in ("nodename nor servname", "name or service not known", "getaddrinfo failed", "timed out", "connection refused", "network is unreachable", "ssl", "certificate")):
             return generate_inaccessible_domain_triage(raw_url, err_msg)
         raise HTTPException(status_code=502, detail=f"Failed to fetch remote URL: {exc}")
 
@@ -369,6 +383,14 @@ def sanitize_result(res: Dict[str, Any]) -> Dict[str, Any]:
 # Serve static web frontend
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    @app.get("/app.css")
+    def serve_css():
+        return FileResponse(STATIC_DIR / "app.css", media_type="text/css")
+
+    @app.get("/app.js")
+    def serve_js():
+        return FileResponse(STATIC_DIR / "app.js", media_type="application/javascript")
 
     @app.get("/")
     def serve_frontend():

@@ -4,9 +4,11 @@
  * LangGraph pipeline execution, and interactive evidence visualization.
  */
 
-const API_BASE = window.location.hostname === 'localhost'
-    ? ''
-    : 'https://explainphish.onrender.com/'; // Your Render backend URL
+// Automatically uses same-origin relative URLs when running on Render or localhost,
+// and points to the Render backend when accessed from a Vercel deployment.
+const API_BASE = window.location.hostname.includes('vercel.app')
+    ? 'https://explainphish.onrender.com'
+    : '';
 
 
 (function () {
@@ -228,7 +230,7 @@ const API_BASE = window.location.hostname === 'localhost'
 
     async function loadSampleCatalog() {
         try {
-            const resp = await fetch('/api/samples');
+            const resp = await fetch(`${API_BASE}/api/samples`);
             const data = await resp.json();
             sampleSelect.innerHTML = '<option value="">Select Sample Document...</option>';
             if (data.samples && data.samples.length > 0) {
@@ -265,7 +267,7 @@ const API_BASE = window.location.hostname === 'localhost'
             if (currentMode === 'file') {
                 const formData = new FormData();
                 formData.append('file', selectedFile);
-                esp = await fetch(`${API_BASE}/api/analyze/file`, {
+                resp = await fetch(`${API_BASE}/api/analyze/file`, {
                     method: 'POST',
                     body: formData,
                 });
@@ -297,7 +299,7 @@ const API_BASE = window.location.hostname === 'localhost'
     async function runSampleAnalysis(samplePath) {
         setAnalyzingUI();
         try {
-            resp = await fetch(`${API_BASE}/api/analyze/sample`, {
+            const resp = await fetch(`${API_BASE}/api/analyze/sample`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sample_path: samplePath }),

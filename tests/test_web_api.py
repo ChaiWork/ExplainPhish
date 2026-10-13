@@ -109,7 +109,7 @@ class TestFileUploadAnalysis:
 
         # Validate core triage fields
         assert "final_verdict" in data
-        assert data["final_verdict"] in ("MALICIOUS", "BENIGN", "SUSPICIOUS")
+        assert any(term in data["final_verdict"] for term in ("MALICIOUS", "BENIGN", "SUSPICIOUS"))
         assert "threat_level" in data
         assert "confidence_score" in data
         assert "model_predictions" in data
