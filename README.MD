@@ -397,3 +397,45 @@ Run tests locally:
 python3 -m pytest tests/test_web_api.py -v
 ```
 Detailed test specifications and verification logs are available in [`docs/api-test-documentation.md`](./docs/api-test-documentation.md).
+
+## REFERENCES
+
+### 1. Benchmark Dataset & Associated Publication
+* **Dataset Citation:**
+  > Canadian Institute for Cybersecurity. (2025). *CIC-Trap4Phish 2025 dataset* [Data set]. University of New Brunswick. https://www.unb.ca/cic/datasets/trap4phish2025.html
+* **Associated Research Paper (UNB CIC):**
+  > Nejati, F., Rabbani, M., Eskandarian, M., Mirani, M., Piya, G., Opushnyev, I., Ghorbani, A. A., & Dadkhah, S. (2026). *CIC-Trap4Phish: A unified multi-format dataset for phishing and quishing attachment detection*. arXiv. https://doi.org/10.48550/arXiv.2602.09015
+
+### 2. Machine Learning & Ensemble Algorithms
+* **Random Forest:**
+  > Breiman, L. (2001). Random forests. *Machine Learning*, 45(1), 5–32. https://doi.org/10.1023/A:1010933404324
+* **XGBoost:**
+  > Chen, T., & Guestrin, C. (2016). XGBoost: A scalable tree boosting system. In *Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining* (pp. 785–794). ACM. https://doi.org/10.1145/2939672.2939785
+* **LightGBM:**
+  > Ke, G., Meng, Q., Finley, T., Wang, T., Chen, W., Ma, W., Ye, Q., & Liu, T.-Y. (2017). LightGBM: A highly efficient gradient boosting decision tree. In *Advances in Neural Information Processing Systems* (Vol. 30, pp. 3146–3154). Curran Associates, Inc. https://proceedings.neurips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html
+* **Decision Trees (CART):**
+  > Breiman, L., Friedman, J. H., Olshen, R. A., & Stone, C. J. (1984). *Classification and regression trees*. Wadsworth & Brooks/Cole Advanced Books & Software.
+* **Ensemble Voting & Jury Theorem:**
+  > Kuncheva, L. I. (2014). *Combining pattern classifiers: Methods and algorithms* (2nd ed.). John Wiley & Sons. https://doi.org/10.1002/9781118914564
+
+### 3. Explainable Artificial Intelligence (XAI)
+* **SHAP (SHapley Additive exPlanations):**
+  > Lundberg, S. M., & Lee, S.-I. (2017). A unified approach to interpreting model predictions. In *Advances in Neural Information Processing Systems* (Vol. 30, pp. 4765–4774). Curran Associates, Inc. https://doi.org/10.48550/arXiv.1705.07874
+* **LIME (Local Interpretable Model-agnostic Explanations):**
+  > Ribeiro, M. T., Singh, S., & Guestrin, C. (2016). "Why should I trust you?": Explaining the predictions of any classifier. In *Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining* (pp. 1135–1144). ACM. https://doi.org/10.1145/2939672.2939778
+
+### 4. Information Theory & Payload Obfuscation
+* **Shannon Entropy:**
+  > Shannon, C. E. (1948). A mathematical theory of communication. *The Bell System Technical Journal*, 27(3), 379–423. https://doi.org/10.1002/j.1538-7305.1948.tb01338.x
+* **Malware & Obfuscation Entropy Analysis:**
+  > Lyda, R., & Hamrock, J. (2007). Using entropy analysis to find encrypted and packed malware. *IEEE Security & Privacy*, 5(2), 40–45. https://doi.org/10.1109/MSP.2007.48
+
+### 5. Cybersecurity Standards & Threat Frameworks
+* **MITRE ATT&CK Framework:**
+  > Strom, B. E., Applebaum, A., Miller, D. P., Nickels, K. C., Pennington, A. G., & Thomas, C. B. (2018). *MITRE ATT&CK™: Design and philosophy* (Technical Report MTR180186). The MITRE Corporation. https://www.mitre.org/publications/technical-papers/mitre-attack-design-and-philosophy
+* **NIST Incident Handling Guidelines (SP 800-61):**
+  > Cichonski, P., Millar, T., Grance, T., & Scarfone, K. (2012). *Computer security incident handling guide* (NIST Special Publication 800-61 Rev. 2). National Institute of Standards and Technology. https://doi.org/10.6028/NIST.SP.800-61r2
+
+### 6. Scientific Computing & Core Libraries
+* **Scikit-Learn:**
+  > Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., Blondel, M., Prettenhofer, P., Weiss, R., Dubourg, V., Vanderplas, J., Passos, A., Cournapeau, D., Brucher, M., Perrot, M., & Duchesnay, É. (2011). Scikit-learn: Machine learning in Python. *Journal of Machine Learning Research*, 12, 2825–2830.
