@@ -6,7 +6,7 @@
 
 const API_BASE = window.location.hostname === 'localhost'
     ? ''
-    : 'https://explainphish-api.onrender.com'; // Your Render backend URL
+    : 'https://explainphish.onrender.com/'; // Your Render backend URL
 
 
 (function () {
