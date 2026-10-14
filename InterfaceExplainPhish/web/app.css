@@ -26,10 +26,10 @@
     --crimson-bg: #281216;
     --crimson-border: #DC2626;
 
-    /* Typography */
+    /* Typography (WCAG AA High-Contrast Compliant) */
     --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
-    --text-muted: #64748B;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, Menlo, monospace;
 
@@ -265,7 +265,7 @@ body {
 .mode-tab {
     background: transparent;
     border: none;
-    color: var(--text-muted);
+    color: #94A3B8;
     padding: 4px 10px;
     font-size: 11px;
     font-weight: 600;
@@ -274,9 +274,13 @@ body {
     transition: var(--transition-fast);
 }
 
+.mode-tab:hover {
+    color: #F8FAFC;
+}
+
 .mode-tab.active {
     background: var(--bg-elevated);
-    color: var(--text-primary);
+    color: #FFFFFF;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
@@ -286,7 +290,7 @@ body {
 }
 
 .drop-zone {
-    border: 2px dashed rgba(255, 255, 255, 0.14);
+    border: 2px dashed rgba(255, 255, 255, 0.2);
     border-radius: 6px;
     padding: 24px 16px;
     text-align: center;
@@ -313,8 +317,9 @@ body {
 }
 
 .drop-sub-text {
-    font-size: 10px;
-    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    color: #CBD5E1;
     margin-bottom: 12px;
 }
 
@@ -485,7 +490,8 @@ body {
 
 .stepper-status {
     font-size: 11px;
-    color: var(--text-muted);
+    font-weight: 500;
+    color: #CBD5E1;
 }
 
 .stepper-list {
@@ -505,14 +511,14 @@ body {
 }
 
 .stepper-row:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .step-glyph {
     font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 700;
-    color: #475569;
+    color: #94A3B8;
     width: 24px;
     flex-shrink: 0;
 }
@@ -524,13 +530,13 @@ body {
 .step-name {
     font-size: 12px;
     font-weight: 600;
-    color: #94A3B8;
+    color: #F8FAFC;
     line-height: 1.3;
 }
 
 .step-sub {
-    font-size: 10px;
-    color: #475569;
+    font-size: 11px;
+    color: #CBD5E1;
     line-height: 1.3;
 }
 
@@ -579,7 +585,7 @@ body {
 .stepper-row.bypassed .step-glyph,
 .stepper-row.bypassed .step-name,
 .stepper-row.bypassed .step-sub {
-    color: #475569;
+    color: #94A3B8;
 }
 
 /* Metadata Card */
@@ -642,7 +648,7 @@ body {
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.1em;
-    color: var(--text-muted);
+    color: #CBD5E1;
     text-transform: uppercase;
     margin-bottom: 4px;
 }
@@ -796,7 +802,7 @@ body {
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
-    color: var(--text-muted);
+    color: #CBD5E1;
     padding: 12px 18px;
     font-size: 12px;
     font-weight: 600;
@@ -809,14 +815,14 @@ body {
 }
 
 .nav-tab:hover {
-    color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.02);
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .nav-tab.active {
     color: var(--cyan-primary);
     border-bottom-color: var(--cyan-primary);
-    background: rgba(56, 189, 248, 0.04);
+    background: rgba(56, 189, 248, 0.08);
 }
 
 .tab-panes-wrapper {
@@ -846,12 +852,13 @@ body {
     font-size: 14px;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 10px;
+    margin: 0 0 10px 0;
+    line-height: 1.3;
 }
 
 .pane-desc {
     font-size: 11px;
-    color: var(--text-muted);
+    color: #CBD5E1;
     margin-bottom: 12px;
 }
 
@@ -880,14 +887,14 @@ body {
 }
 
 .data-table th {
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(0, 0, 0, 0.35);
     padding: 10px 14px;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    color: #F1F5F9;
     text-transform: uppercase;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-medium);
 }
 
 .data-table td {
