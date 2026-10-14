@@ -37,8 +37,10 @@ import sys
 from pathlib import Path
 
 # ── locate the model folder ────────────────────────────────────────────────────
+__test__ = False  # Tell pytest this is a CLI diagnostic script, not a test suite
 _HERE = Path(__file__).resolve().parent
 _MODELS_ROOT = _HERE / "models" if (_HERE / "models").exists() else _HERE.parent / "models"
+
 
 FORMAT_EXTENSIONS = {
     "pdf":   {".pdf"},

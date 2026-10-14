@@ -32,3 +32,11 @@ oletools>=0.60
 # Testing & Quality Assurance
 pytest>=8.3.0
 httpx>=0.27.0
+
+# LLM Cognitive Engine & Cloud Inferences
+groq>=0.11.0
+python-dotenv>=1.0.0
+
+# Document & Incident Report Exporting
+reportlab>=4.2.0
+python-docx>=1.1.0

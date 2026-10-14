@@ -13,6 +13,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.env
 
 # Jupyter checkpoints
 .ipynb_checkpoints/

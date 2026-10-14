@@ -46,6 +46,7 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         explainability: document.getElementById('step-explainability'),
         deep_threat_analysis: document.getElementById('step-deep_threat_analysis'),
         mitre_mapping: document.getElementById('step-mitre_mapping'),
+        cognitive_triage: document.getElementById('step-cognitive_triage'),
         soc_report: document.getElementById('step-soc_report'),
     };
 
@@ -71,6 +72,8 @@ const API_BASE = window.location.hostname.includes('vercel.app')
     // Report Actions
     const btnCopyReport = document.getElementById('btnCopyReport');
     const btnDownloadReport = document.getElementById('btnDownloadReport');
+    const btnDownloadPdf = document.getElementById('btnDownloadPdf');
+    const btnDownloadDocx = document.getElementById('btnDownloadDocx');
     const reportViewer = document.getElementById('reportViewer');
 
     // Toast
@@ -151,6 +154,26 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         // Copy / Download Report
         btnCopyReport.addEventListener('click', copyReportToClipboard);
         btnDownloadReport.addEventListener('click', downloadReportMarkdown);
+        if (btnDownloadPdf) btnDownloadPdf.addEventListener('click', downloadReportPdf);
+        if (btnDownloadDocx) btnDownloadDocx.addEventListener('click', downloadReportDocx);
+
+        // Interactive SOC Copilot Chat
+        const chatForm = document.getElementById('chatForm');
+        if (chatForm) {
+            chatForm.addEventListener('submit', handleChatSubmit);
+        }
+
+        const promptButtons = document.querySelectorAll('.btn-prompt-pill');
+        promptButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const prompt = btn.getAttribute('data-prompt');
+                const chatInput = document.getElementById('chatInput');
+                if (chatInput) {
+                    chatInput.value = prompt;
+                    handleChatSubmit(new Event('submit'));
+                }
+            });
+        });
 
         // Copyable Hash metadata
         [metaSha256, metaMd5].forEach(el => {
@@ -359,6 +382,7 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         renderXaiTab(data);
         renderForensicsTab(data);
         renderMitreTab(data);
+        renderLlmTab(data);
         renderReportTab(data);
 
         showToast('Autonomous SOC triage completed', '✅');
@@ -448,10 +472,17 @@ const API_BASE = window.location.hostname.includes('vercel.app')
             `${nMitre} techniques • Rule: ATT&CK & SOAR`,
             rules.mitre_mapping || `Rule 6: Mapped ${nMitre} MITRE techniques and SOAR playbooks.`);
 
-        // Stage 7: Report
+        // Stage 7: Cognitive AI Triage
+        const llmInfo = data.llm_triage || {};
+        const prov = llmInfo.provider || 'Cognitive AI';
+        setStepRow('cognitive_triage', 'completed', '[v]',
+            `AI Triage (${prov}) • Rule: Pretext Reasoning`,
+            rules.cognitive_triage || `Rule 7: Evaluated social engineering lure & psychological pretexting via ${prov}.`);
+
+        // Stage 8: Report
         setStepRow('soc_report', 'completed', '[v]',
             `Generated dossier • Rule: IR Synthesis`,
-            rules.soc_report || 'Rule 7: Synthesized executive incident report with timeline and playbooks.');
+            rules.soc_report || 'Rule 8: Synthesized executive incident report with timeline and playbooks.');
     }
 
     function setStepRow(nodeKey, stateClass, glyph, subText, tooltipText) {
@@ -656,6 +687,120 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         reportViewer.textContent = md;
     }
 
+    function renderLlmTab(data) {
+        const llm = data.llm_triage || {};
+        const se = llm.social_engineering || {};
+        const ev = llm.evasion_analysis || {};
+
+        const engineBadge = document.getElementById('llmEngineBadge');
+        if (engineBadge) {
+            engineBadge.textContent = llm.status_badge || `AI Reasoner Ready (${llm.provider || 'Cognitive'})`;
+        }
+
+        const lureType = document.getElementById('llmLureType');
+        if (lureType) lureType.textContent = se.lure_type || 'Unclassified';
+
+        const authSpoof = document.getElementById('llmAuthoritySpoof');
+        if (authSpoof) authSpoof.textContent = `Authority: ${se.authority_spoof || 'None Detected'}`;
+
+        const urgency = document.getElementById('llmUrgency');
+        if (urgency) {
+            urgency.textContent = se.urgency_level || 'NORMAL';
+            urgency.style.color = se.urgency_level === 'ELEVATED' ? '#F43F5E' : '#38BDF8';
+        }
+
+        const triggers = document.getElementById('llmTriggers');
+        if (triggers) {
+            triggers.textContent = `Triggers: ${(se.psychological_triggers || []).join(', ') || 'Standard context'}`;
+        }
+
+        const evasion = document.getElementById('llmEvasion');
+        if (evasion) {
+            evasion.textContent = ev.complexity || 'LOW';
+            evasion.style.color = (ev.complexity === 'CRITICAL' || ev.complexity === 'HIGH') ? '#EF4444' : '#10B981';
+        }
+
+        const techCount = document.getElementById('llmTechCount');
+        if (techCount) {
+            techCount.textContent = `Techniques: ${(ev.techniques || []).length} identified`;
+        }
+
+        const narrativeBox = document.getElementById('llmNarrativeContent');
+        if (narrativeBox) {
+            const rawNarrative = llm.executive_threat_narrative || data.llm_narrative || 'No cognitive narrative generated.';
+            narrativeBox.innerHTML = formatMarkdownText(rawNarrative);
+        }
+    }
+
+    function formatMarkdownText(md) {
+        if (!md) return '';
+        let html = escapeHtml(md);
+        html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+        html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        html = html.replace(/\n\n/g, '</p><p>');
+        return '<p>' + html + '</p>';
+    }
+
+    async function handleChatSubmit(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        const chatInput = document.getElementById('chatInput');
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatInput || !chatMessages) return;
+
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        chatInput.value = '';
+
+        // Append user bubble
+        const userMsgDiv = document.createElement('div');
+        userMsgDiv.className = 'chat-msg user';
+        userMsgDiv.innerHTML = `<div class="chat-bubble">${escapeHtml(message)}</div>`;
+        chatMessages.appendChild(userMsgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Append typing indicator
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'chat-msg agent typing';
+        typingDiv.innerHTML = `<div class="chat-bubble"><em>Thinking...</em></div>`;
+        chatMessages.appendChild(typingDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        try {
+            const resp = await fetch(`${API_BASE}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: message,
+                    state: activeInvestigationData || {},
+                }),
+            });
+
+            typingDiv.remove();
+
+            if (!resp.ok) {
+                throw new Error('Chat service unreachable');
+            }
+
+            const resData = await resp.json();
+            const agentMsgDiv = document.createElement('div');
+            agentMsgDiv.className = 'chat-msg agent';
+            agentMsgDiv.innerHTML = `<div class="chat-bubble"><strong>${escapeHtml(resData.provider || 'Copilot')}:</strong> ${formatMarkdownText(resData.response)}</div>`;
+            chatMessages.appendChild(agentMsgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (err) {
+            if (typingDiv) typingDiv.remove();
+            const errDiv = document.createElement('div');
+            errDiv.className = 'chat-msg agent error';
+            errDiv.innerHTML = `<div class="chat-bubble" style="color: #F87171;">Error: ${escapeHtml(err.message)}</div>`;
+            chatMessages.appendChild(errDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Tab Switching & Utilities
     // ─────────────────────────────────────────────────────────────────────────
@@ -696,6 +841,74 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         showToast('Report downloaded', '💾');
+    }
+
+    async function downloadReportPdf() {
+        if (!activeInvestigationData) {
+            showToast('No investigation report available to export', '⚠️');
+            return;
+        }
+        showToast('Compiling executive PDF report...', '⏳');
+        try {
+            const resp = await fetch(`${API_BASE}/api/export/pdf`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(activeInvestigationData),
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({ detail: 'PDF compilation error' }));
+                throw new Error(err.detail || 'PDF download failed');
+            }
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const hash = (activeInvestigationData.file_hash_sha256 || 'report').substring(0, 10);
+            const rawName = activeInvestigationData.file_name || 'incident';
+            const cleanName = rawName.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+            a.href = url;
+            a.download = `SOC_Report_${hash}_${cleanName}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('PDF Incident Report downloaded', '📕');
+        } catch (err) {
+            showToast(`Export failed: ${err.message}`, '❌');
+        }
+    }
+
+    async function downloadReportDocx() {
+        if (!activeInvestigationData) {
+            showToast('No investigation report available to export', '⚠️');
+            return;
+        }
+        showToast('Compiling Microsoft Word document...', '⏳');
+        try {
+            const resp = await fetch(`${API_BASE}/api/export/docx`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(activeInvestigationData),
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({ detail: 'Word compilation error' }));
+                throw new Error(err.detail || 'Word download failed');
+            }
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const hash = (activeInvestigationData.file_hash_sha256 || 'report').substring(0, 10);
+            const rawName = activeInvestigationData.file_name || 'incident';
+            const cleanName = rawName.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+            a.href = url;
+            a.download = `SOC_Report_${hash}_${cleanName}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Word Document downloaded', '📘');
+        } catch (err) {
+            showToast(`Export failed: ${err.message}`, '❌');
+        }
     }
 
     function showToast(message, icon = 'ℹ️') {

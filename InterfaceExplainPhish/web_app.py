@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -30,6 +30,8 @@ if str(_HERE) not in sys.path:
 
 from langgraph_pipeline import get_explainphish_graph, run_pipeline
 from inference import FORMAT_DISPLAY
+from llm_engine import get_active_provider_config, chat_with_soc_agent
+from report_exporter import generate_pdf_report, generate_docx_report
 
 app = FastAPI(
     title="ExplainPhish SOC Workstation",
@@ -68,14 +70,75 @@ class SampleAnalyzeRequest(BaseModel):
     sample_path: str
 
 
+class ChatRequest(BaseModel):
+    message: str
+    state: Optional[Dict[str, Any]] = None
+    history: Optional[List[Dict[str, str]]] = None
+
+
 @app.get("/api/health")
 def api_health():
+    llm_info = get_active_provider_config()
     return {
         "status": "healthy",
-        "engine": "ExplainPhish LangGraph SOC Agent",
+        "engine": "ExplainPhish LangGraph SOC Agent (with Cognitive LLM Triage)",
+        "llm_engine": {
+            "provider": llm_info["provider"],
+            "model": llm_info["model"],
+            "mode": llm_info["mode"],
+            "status": "Ready",
+        },
         "supported_formats": list(FORMAT_DISPLAY.values()),
         "models": ["Random Forest", "Decision Tree", "Neural Network (MLP)", "XGBoost", "LightGBM"],
     }
+
+
+@app.get("/api/llm/status")
+def api_llm_status():
+    return get_active_provider_config()
+
+
+@app.post("/api/chat")
+def api_chat(req: ChatRequest):
+    """Conversational SOC analyst copilot powered by live LLM or cognitive engine."""
+    current_state = req.state or {}
+    reply = chat_with_soc_agent(current_state, req.message, history=req.history)
+    return {
+        "response": reply,
+        "provider": get_active_provider_config().get("provider", "ExplainPhish AI"),
+    }
+
+
+@app.post("/api/export/pdf")
+def api_export_pdf(state: Dict[str, Any]):
+    """Compile and download executive PDF incident report."""
+    try:
+        pdf_bytes = generate_pdf_report(state)
+        raw_name = state.get("file_name", "incident")
+        clean_name = re.sub(r"[^a-zA-Z0-9_\-\.]", "_", raw_name)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="SOC_Report_{clean_name}.pdf"'},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"PDF generation error: {str(exc)}")
+
+
+@app.post("/api/export/docx")
+def api_export_docx(state: Dict[str, Any]):
+    """Compile and download executive Microsoft Word (.docx) incident report."""
+    try:
+        docx_bytes = generate_docx_report(state)
+        raw_name = state.get("file_name", "incident")
+        clean_name = re.sub(r"[^a-zA-Z0-9_\-\.]", "_", raw_name)
+        return Response(
+            content=docx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="SOC_Report_{clean_name}.docx"'},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"DOCX generation error: {str(exc)}")
 
 
 @app.get("/api/samples")
