@@ -30,6 +30,7 @@ if str(_HERE) not in sys.path:
 
 from langgraph_pipeline import get_explainphish_graph, run_pipeline
 from inference import FORMAT_DISPLAY
+from llm_engine import get_active_provider_config, chat_with_soc_agent
 
 app = FastAPI(
     title="ExplainPhish SOC Workstation",
@@ -68,13 +69,42 @@ class SampleAnalyzeRequest(BaseModel):
     sample_path: str
 
 
+class ChatRequest(BaseModel):
+    message: str
+    state: Optional[Dict[str, Any]] = None
+    history: Optional[List[Dict[str, str]]] = None
+
+
 @app.get("/api/health")
 def api_health():
+    llm_info = get_active_provider_config()
     return {
         "status": "healthy",
-        "engine": "ExplainPhish LangGraph SOC Agent",
+        "engine": "ExplainPhish LangGraph SOC Agent (with Cognitive LLM Triage)",
+        "llm_engine": {
+            "provider": llm_info["provider"],
+            "model": llm_info["model"],
+            "mode": llm_info["mode"],
+            "status": "Ready",
+        },
         "supported_formats": list(FORMAT_DISPLAY.values()),
         "models": ["Random Forest", "Decision Tree", "Neural Network (MLP)", "XGBoost", "LightGBM"],
+    }
+
+
+@app.get("/api/llm/status")
+def api_llm_status():
+    return get_active_provider_config()
+
+
+@app.post("/api/chat")
+def api_chat(req: ChatRequest):
+    """Conversational SOC analyst copilot powered by live LLM or cognitive engine."""
+    current_state = req.state or {}
+    reply = chat_with_soc_agent(current_state, req.message, history=req.history)
+    return {
+        "response": reply,
+        "provider": get_active_provider_config().get("provider", "ExplainPhish AI"),
     }
 
 

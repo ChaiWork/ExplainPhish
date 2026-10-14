@@ -157,6 +157,15 @@
                         </div>
 
                         <!-- Node 7 -->
+                        <div class="stepper-row" id="step-cognitive_triage" data-node="cognitive_triage">
+                            <span class="step-glyph">[ ]</span>
+                            <div class="step-text">
+                                <div class="step-name">Cognitive AI Triage</div>
+                                <div class="step-sub">LLM Lure &amp; Pretext Reasoning</div>
+                            </div>
+                        </div>
+
+                        <!-- Node 8 -->
                         <div class="stepper-row" id="step-soc_report" data-node="soc_report">
                             <span class="step-glyph">[ ]</span>
                             <div class="step-text">
@@ -240,6 +249,9 @@
                         </button>
                         <button class="nav-tab" id="tabBtnMitre" data-tab="mitre" role="tab" aria-selected="false">
                             <span>🎯</span> MITRE ATT&amp;CK &amp; SOAR
+                        </button>
+                        <button class="nav-tab" id="tabBtnLlm" data-tab="llm" role="tab" aria-selected="false">
+                            <span>🧠</span> AI SOC Copilot
                         </button>
                         <button class="nav-tab" id="tabBtnReport" data-tab="report" role="tab" aria-selected="false">
                             <span>📑</span> Incident Report
@@ -383,7 +395,65 @@
                             </div>
                         </div>
 
-                        <!-- Pane 6: SOC Incident Response Report -->
+                        <!-- Pane 6: Cognitive AI & Interactive Copilot -->
+                        <div class="tab-pane" id="paneLlm" role="tabpanel">
+                            <!-- Upper Section: Cognitive Lure & Evasion Assessment -->
+                            <div class="pane-section">
+                                <div class="llm-header-status-row">
+                                    <h3 class="pane-title">Cognitive Threat Intelligence &amp; Psychological Profiling</h3>
+                                    <span class="llm-engine-badge" id="llmEngineBadge">AI Cognitive Engine Ready</span>
+                                </div>
+                                <div class="llm-insight-grid">
+                                    <div class="llm-card">
+                                        <div class="llm-card-label">LURE CLASSIFICATION</div>
+                                        <div class="llm-card-val" id="llmLureType">-</div>
+                                        <div class="llm-card-sub" id="llmAuthoritySpoof">Authority: -</div>
+                                    </div>
+                                    <div class="llm-card">
+                                        <div class="llm-card-label">PSYCHOLOGICAL URGENCY</div>
+                                        <div class="llm-card-val" id="llmUrgency">-</div>
+                                        <div class="llm-card-sub" id="llmTriggers">Triggers: -</div>
+                                    </div>
+                                    <div class="llm-card">
+                                        <div class="llm-card-label">EVASION COMPLEXITY</div>
+                                        <div class="llm-card-val" id="llmEvasion">-</div>
+                                        <div class="llm-card-sub" id="llmTechCount">Techniques: -</div>
+                                    </div>
+                                </div>
+                                <div class="llm-narrative-box" id="llmNarrativeBox">
+                                    <div class="llm-narrative-title">Autonomous Threat Intelligence Briefing</div>
+                                    <div class="llm-narrative-content" id="llmNarrativeContent">
+                                        <p class="empty-state">Run an investigation to generate LLM cognitive threat briefing.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Lower Section: Interactive SOC Copilot Chat -->
+                            <div class="pane-section chat-section">
+                                <h3 class="pane-title">Interactive AI SOC Copilot</h3>
+                                <div class="chat-container">
+                                    <div class="chat-quick-prompts" id="chatQuickPrompts">
+                                        <button type="button" class="btn-prompt-pill" data-prompt="Why did the models vote this way?">❓ Explain Model Votes</button>
+                                        <button type="button" class="btn-prompt-pill" data-prompt="Generate a YARA detection rule for this file.">🛡️ Generate YARA Rule</button>
+                                        <button type="button" class="btn-prompt-pill" data-prompt="Draft an incident notification email to affected users.">📧 Draft User Advisory</button>
+                                        <button type="button" class="btn-prompt-pill" data-prompt="What firewall or DNS blocking rules should we apply?">🚫 Firewall &amp; DNS Rules</button>
+                                    </div>
+                                    <div class="chat-messages" id="chatMessages">
+                                        <div class="chat-msg system">
+                                            <div class="chat-bubble">
+                                                <strong>ExplainPhish Copilot:</strong> I have direct access to this forensic dossier. Ask me anything about this sample, request YARA signatures, or get guidance on containment.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <form class="chat-input-bar" id="chatForm">
+                                        <input type="text" id="chatInput" placeholder="Ask ExplainPhish AI Copilot (e.g. 'Generate YARA rule', 'Explain decision drivers')..." autocomplete="off" />
+                                        <button type="submit" id="btnSendChat" class="btn-primary btn-sm">Send</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pane 7: SOC Incident Response Report -->
                         <div class="tab-pane" id="paneReport" role="tabpanel">
                             <div class="pane-section">
                                 <div class="report-header-row">

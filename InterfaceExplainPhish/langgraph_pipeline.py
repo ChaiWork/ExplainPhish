@@ -54,6 +54,8 @@ from inference import (
     load_model_bundle,
     standardize_features,
 )
+from llm_engine import generate_cognitive_threat_analysis
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # State Schema
@@ -105,6 +107,10 @@ class ExplainPhishState(TypedDict, total=False):
 
     # Investigation Rules
     applied_rules: Dict[str, str]
+
+    # Cognitive AI & LLM Threat Intelligence
+    llm_triage: Dict[str, Any]
+    llm_narrative: str
 
     # Incident Response Output
     executive_summary: str
@@ -878,7 +884,34 @@ def node_mitre_mapping(state: ExplainPhishState) -> Dict[str, Any]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Node 7: SOC Incident Response Report Generation
+# Node 7: Cognitive Threat Intelligence & LLM Reasoning
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def node_llm_cognitive_triage(state: ExplainPhishState) -> Dict[str, Any]:
+    """
+    Evaluates semantic lure intent, psychological coercion,
+    obfuscation mechanics, and authors an executive threat briefing
+    using frontier LLM reasoning (or resilient heuristic engine).
+    """
+    if state.get("error"):
+        return {}
+
+    analysis = generate_cognitive_threat_analysis(state)
+    rules = dict(state.get("applied_rules") or {})
+    rule_desc = f"Rule 7 (Cognitive Triage): {analysis.get('status_badge', 'AI Threat Analysis Complete')}"
+    rules["cognitive_triage"] = rule_desc
+
+    return {
+        "llm_triage": analysis,
+        "llm_narrative": analysis.get("executive_threat_narrative", ""),
+        "applied_rules": rules,
+        "applied_rule": rule_desc,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node 8: SOC Incident Response Report Generation
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -908,7 +941,7 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
     status_badge = "🔴" if "MALICIOUS" in verdict else ("🟠" if "SUSPICIOUS" in verdict else ("🟢" if "CLEAN" in threat_level else "🟡"))
 
     rules = dict(state.get("applied_rules") or {})
-    rule_desc = f"Rule 7 (Executive Synthesis): Synthesized comprehensive SOC IR dossier with verdict {verdict}"
+    rule_desc = f"Rule 8 (Executive Synthesis): Synthesized comprehensive SOC IR dossier with verdict {verdict}"
     rules["soc_report"] = rule_desc
 
     report_lines = [
@@ -936,7 +969,7 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
             "| Stage | Trigger & Operational Rule Evaluation |",
             "| :--- | :--- |",
         ])
-        for stage_k in ["intake_safety", "feature_extraction", "ml_ensemble", "explainability", "deep_threat_analysis", "mitre_mapping", "soc_report"]:
+        for stage_k in ["intake_safety", "feature_extraction", "ml_ensemble", "explainability", "deep_threat_analysis", "mitre_mapping", "cognitive_triage", "soc_report"]:
             if stage_k in rules:
                 stage_title = stage_k.replace("_", " ").title()
                 report_lines.append(f"| **{stage_title}** | {rules[stage_k]} |")
@@ -949,9 +982,20 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
             "",
         ])
 
+    # LLM Cognitive Threat Intelligence Narrative
+    llm_info = state.get("llm_triage", {})
+    if llm_info and llm_info.get("executive_threat_narrative"):
+        report_lines.extend([
+            "## 2. AI Threat Intelligence & Cognitive Forensics",
+            f"*{llm_info.get('status_badge', 'Cognitive Threat Assessment')} (Engine: `{llm_info.get('provider', 'AI')}` | Model: `{llm_info.get('model', 'N/A')}`)*",
+            "",
+            llm_info["executive_threat_narrative"],
+            "",
+        ])
+
     # Model Inference Table
     report_lines.extend([
-        "## 2. Multi-Model ML Ensemble Consensus",
+        "## 3. Multi-Model ML Ensemble Consensus",
         f"Consensus voting evaluated across {len(predictions)} standardized architectures with 100% feature parity.",
         "",
         "| Architecture | Prediction | Phishing Probability | Status |",
@@ -1075,6 +1119,7 @@ def build_explainphish_graph():
     builder.add_node("explainability", node_explainability)
     builder.add_node("deep_threat_analysis", node_deep_threat_analysis)
     builder.add_node("mitre_mapping", node_mitre_mapping)
+    builder.add_node("cognitive_triage", node_llm_cognitive_triage)
     builder.add_node("soc_report", node_soc_report)
 
     # Edges
@@ -1095,7 +1140,8 @@ def build_explainphish_graph():
     )
 
     builder.add_edge("deep_threat_analysis", "mitre_mapping")
-    builder.add_edge("mitre_mapping", "soc_report")
+    builder.add_edge("mitre_mapping", "cognitive_triage")
+    builder.add_edge("cognitive_triage", "soc_report")
     builder.add_edge("soc_report", END)
 
     return builder.compile()
