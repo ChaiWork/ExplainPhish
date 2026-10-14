@@ -348,6 +348,28 @@ def compute_risk_drivers(
     except Exception:
         shap_impacts = None
 
+    # 2. Intelligent Fallback: Marginal baseline probability perturbation if SHAP library is not installed
+    if shap_impacts is None and hasattr(rf, "predict_proba"):
+        try:
+            base_p = float(rf.predict_proba(sample_std)[0, 1])
+            fallback_impacts = []
+            for idx in range(len(selected_features)):
+                perturbed = sample_std.copy()
+                perturbed[0, idx] = 0.0  # Evaluate probability impact relative to normal baseline (0.0 mean)
+                p_pert = float(rf.predict_proba(perturbed)[0, 1])
+                marginal_delta = base_p - p_pert
+                if abs(marginal_delta) > 1e-4:
+                    fallback_impacts.append(marginal_delta)
+                elif hasattr(rf, "feature_importances_"):
+                    # If feature doesn't flip a tree alone, weight importance in direction of the verdict
+                    dir_sign = 1.0 if base_p >= 0.5 else -1.0
+                    fallback_impacts.append(float(rf.feature_importances_[idx] * dir_sign * 0.05))
+                else:
+                    fallback_impacts.append(0.0)
+            shap_impacts = fallback_impacts
+        except Exception:
+            shap_impacts = None
+
     # Resolve format if not passed directly but present in bundle
     fmt_key = fmt or bundle.get("fmt", "")
 
