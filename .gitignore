@@ -39,3 +39,4 @@ reports/
 
 googleCollab/data/html/hard_negatives
 retrain_hard_negatives.py
+.env
