@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -31,6 +31,7 @@ if str(_HERE) not in sys.path:
 from langgraph_pipeline import get_explainphish_graph, run_pipeline
 from inference import FORMAT_DISPLAY
 from llm_engine import get_active_provider_config, chat_with_soc_agent
+from report_exporter import generate_pdf_report, generate_docx_report
 
 app = FastAPI(
     title="ExplainPhish SOC Workstation",
@@ -106,6 +107,38 @@ def api_chat(req: ChatRequest):
         "response": reply,
         "provider": get_active_provider_config().get("provider", "ExplainPhish AI"),
     }
+
+
+@app.post("/api/export/pdf")
+def api_export_pdf(state: Dict[str, Any]):
+    """Compile and download executive PDF incident report."""
+    try:
+        pdf_bytes = generate_pdf_report(state)
+        raw_name = state.get("file_name", "incident")
+        clean_name = re.sub(r"[^a-zA-Z0-9_\-\.]", "_", raw_name)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="SOC_Report_{clean_name}.pdf"'},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"PDF generation error: {str(exc)}")
+
+
+@app.post("/api/export/docx")
+def api_export_docx(state: Dict[str, Any]):
+    """Compile and download executive Microsoft Word (.docx) incident report."""
+    try:
+        docx_bytes = generate_docx_report(state)
+        raw_name = state.get("file_name", "incident")
+        clean_name = re.sub(r"[^a-zA-Z0-9_\-\.]", "_", raw_name)
+        return Response(
+            content=docx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="SOC_Report_{clean_name}.docx"'},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"DOCX generation error: {str(exc)}")
 
 
 @app.get("/api/samples")

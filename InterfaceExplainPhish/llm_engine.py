@@ -77,15 +77,17 @@ def get_active_provider_config() -> Dict[str, Any]:
     if groq_key:
         chosen_model = model_override or "qwen/qwen3.8-27b"
         if "prompt-guard" in chosen_model:
-            # Llama prompt guard is an injection classifier, not a chat generator
+            # Llama prompt guard is an injection classifier, not a text generator
             chosen_model = "qwen/qwen3.8-27b"
 
         return {
             "provider": "Groq",
             "model": chosen_model,
+            "fallback_models": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "allam-2-7b"],
+            "security_guard_model": "meta-llama/llama-prompt-guard-2-22m",
             "api_key": groq_key,
             "mode": "LIVE_LLM",
-            "description": f"Groq Ultra-Low Latency SOC Inference Engine ({chosen_model})",
+            "description": f"Groq Ultra-Low Latency SOC Inference Engine ({chosen_model}) with Meta Prompt Guard & Rate-Limit Fallback",
         }
 
     # 4. Anthropic
@@ -119,35 +121,98 @@ def get_active_provider_config() -> Dict[str, Any]:
     }
 
 
+# High-performance generative models available on Groq in priority order
+GROQ_TEXT_FALLBACK_CHAIN = [
+    "qwen/qwen3.8-27b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "allam-2-7b",
+]
+
+
+def check_prompt_injection(text: str) -> Dict[str, Any]:
+    """
+    Evaluates input text against Meta's specialized Prompt Guard model:
+    'meta-llama/llama-prompt-guard-2-22m' via Groq.
+    Detects adversarial jailbreak and prompt injection attempts targeting the SOC LLM.
+    """
+    groq_key = (os.environ.get("GROQ_API_KEY") or "").strip()
+    if not groq_key or not text or not text.strip():
+        return {"checked": False, "score": 0.0, "is_injection": False}
+
+    try:
+        from groq import Groq
+        client = Groq(api_key=groq_key)
+        sample_text = text.strip()[:2000]
+        resp = client.chat.completions.create(
+            model="meta-llama/llama-prompt-guard-2-22m",
+            messages=[{"role": "user", "content": sample_text}],
+            max_tokens=10,
+            temperature=0.0,
+            timeout=5,
+        )
+        if resp and resp.choices and len(resp.choices) > 0:
+            raw_score = resp.choices[0].message.content.strip()
+            score = float(raw_score)
+            is_injection = score > 0.85
+            return {
+                "checked": True,
+                "score": score,
+                "is_injection": is_injection,
+                "model": "meta-llama/llama-prompt-guard-2-22m",
+            }
+    except Exception as exc:
+        logger.debug(f"Prompt Guard 22M check skipped: {exc}")
+
+    return {"checked": False, "score": 0.0, "is_injection": False}
+
+
 def call_llm_completion(prompt: str, system_prompt: str, max_tokens: int = 1200) -> Optional[str]:
     """
     Safely executes an LLM generation using native provider SDKs (Groq, OpenAI)
-    or LiteLLM. Falls back gracefully if the provider fails or times out.
+    or LiteLLM. Features automatic multi-model failover when rate-limited.
     """
     config = get_active_provider_config()
     if config["mode"] != "LIVE_LLM":
         return None
 
-    # Native Groq execution (Ultra-fast direct API)
+    # Native Groq execution with cascading rate-limit fallback
     if config["provider"] == "Groq":
         try:
             from groq import Groq
             client = Groq(api_key=config["api_key"])
-            model_id = config["model"].replace("groq/", "")
-            resp = client.chat.completions.create(
-                model=model_id,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=max_tokens,
-                temperature=0.2,
-                timeout=20,
-            )
-            if resp and resp.choices and len(resp.choices) > 0:
-                content = resp.choices[0].message.content
-                if content and content.strip():
-                    return content.strip()
+            primary_model = config["model"].replace("groq/", "")
+            if "prompt-guard" in primary_model:
+                primary_model = "qwen/qwen3.8-27b"
+
+            models_to_attempt = [primary_model] + [m for m in GROQ_TEXT_FALLBACK_CHAIN if m != primary_model]
+
+            for m in models_to_attempt:
+                try:
+                    resp = client.chat.completions.create(
+                        model=m,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": prompt},
+                        ],
+                        max_tokens=max_tokens,
+                        temperature=0.2,
+                        timeout=20,
+                    )
+                    if resp and resp.choices and len(resp.choices) > 0:
+                        content = resp.choices[0].message.content
+                        if content and content.strip():
+                            if m != primary_model:
+                                logger.info(f"Groq primary model ({primary_model}) rate-limited; automatically fell back to {m}")
+                            return content.strip()
+                except Exception as exc:
+                    exc_str = str(exc).lower()
+                    if any(term in exc_str for term in ("rate_limit", "rate limit", "429", "quota", "too many requests", "limit")):
+                        logger.warning(f"Groq model {m} rate-limited (429): {exc}. Falling back to next model...")
+                        continue
+                    else:
+                        logger.warning(f"Groq model {m} call error: {exc}. Trying next model...")
+                        continue
         except Exception as exc:
             logger.warning(f"Native Groq API call failed: {exc}. Trying LiteLLM fallback.")
 
@@ -444,6 +509,19 @@ def chat_with_soc_agent(
     mitre = state.get("mitre_tactics", [])
     playbook = state.get("soc_playbook_actions", [])
     sha256 = state.get("file_hash_sha256", "N/A")
+
+    # 1. Prompt Injection Security Scan using Meta Prompt Guard 22M
+    guard_result = check_prompt_injection(question)
+    if guard_result.get("is_injection"):
+        score = guard_result.get("score", 0.0)
+        logger.warning(f"Adversarial prompt injection detected by Prompt Guard: score={score:.4f}")
+        return (
+            f"⚠️ **Adversarial Prompt Injection Blocked**\n\n"
+            f"- **Detection Engine:** `meta-llama/llama-prompt-guard-2-22m`\n"
+            f"- **Adversarial Risk Score:** `{score:.2%}`\n\n"
+            f"The submitted query contains patterns associated with prompt injection, jailbreaking, or instruction override attempts. "
+            f"ExplainPhish Zero-Trust AI policy has blocked this input to protect the SOC Copilot integrity."
+        )
 
     # If Live LLM available, invoke with full grounding
     if config["mode"] == "LIVE_LLM":
