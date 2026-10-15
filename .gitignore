@@ -28,3 +28,47 @@ Thumbs.db
 googleCollab/InterfaceExplainPhish/
 googleCollab/googleCollab/
 googleCollab/output/
+# Sample test documents — excluded to prevent accidental secret exposure
+# (HTML samples may contain API keys from real phishing pages)
+InterfaceExplainPhish/Sample/
+Sample/
+**/Sample/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.env
+.pytest_cache
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Colab nested run artifacts
+googleCollab/InterfaceExplainPhish/
+googleCollab/googleCollab/
+googleCollab/output/
+
+# Live fetched analysis downloads
+InterfaceExplainPhish/downloads/
+downloads/
+
+# Generated SOC analysis reports
+InterfaceExplainPhish/reports/
+reports/
+
+googleCollab/data/html/hard_negatives
+retrain_hard_negatives.py
+.env
