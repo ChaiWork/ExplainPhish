@@ -1117,7 +1117,7 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
             "| Stage | Trigger & Operational Rule Evaluation |",
             "| :--- | :--- |",
         ])
-        for stage_k in ["intake_safety", "feature_extraction", "ml_ensemble", "explainability", "deep_threat_analysis", "mitre_mapping", "cognitive_triage", "soc_report"]:
+        for stage_k in ["intake_safety", "feature_extraction", "ml_ensemble", "explainability", "deep_threat_analysis", "mitre_mapping", "analyst_review", "cognitive_triage", "soc_report"]:
             if stage_k in rules:
                 stage_title = stage_k.replace("_", " ").title()
                 report_lines.append(f"| **{stage_title}** | {rules[stage_k]} |")
@@ -1165,7 +1165,7 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
     # Explainable AI Drivers
     if top_drivers:
         report_lines.extend([
-            "## 3. Explainable AI (XAI) — Top Decision Drivers",
+            "## 4. Explainable AI (XAI) — Top Decision Drivers",
             "Feature impact on model classification derived from normalized feature importance and standardized training deviations ($z = \\frac{x - \\mu}{\\sigma}$):",
             "",
             "| Feature | Description | Raw Value | Z-Score | Direction | Risk Impact |",
@@ -1181,7 +1181,7 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
     # Deep Forensics & IOCs
     if deep.get("forensic_inspection_conducted"):
         report_lines.extend([
-            "## 4. Deep Forensic Static Telemetry",
+            "## 5. Deep Forensic Static Telemetry",
             "Autonomous static inspection findings:",
             "",
         ])
@@ -1202,7 +1202,7 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
     # MITRE ATT&CK Matrix
     if mitre:
         report_lines.extend([
-            "## 5. MITRE ATT&CK Mapping",
+            "## 6. MITRE ATT&CK Mapping",
             "| Technique ID | Tactic | Technique Name | Operational Description |",
             "| :--- | :--- | :--- | :--- |",
         ])
@@ -1213,7 +1213,7 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
     # SOAR Playbook Actions
     if playbook:
         report_lines.extend([
-            "## 6. Prescriptive SOAR Incident Response Playbook",
+            "## 7. Prescriptive SOAR Incident Response Playbook",
             "| Stage | Action Tier | Prescribed Response Action |",
             "| :--- | :--- | :--- |",
         ])
@@ -1231,7 +1231,7 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
         reviewed_at = analyst_review.get("reviewed_at", timestamp)
 
         report_lines.extend([
-            "## 7. Human-in-the-Loop (HITL) Analyst Verification",
+            "## 8. Human-in-the-Loop (HITL) Analyst Verification",
             "| Field | Verification Telemetry |",
             "| :--- | :--- |",
             f"| **Review Status** | `{status_str}` |",

@@ -12,6 +12,14 @@
     <link rel="stylesheet" href="./app.css?v=2.3">
 </head>
 <body>
+    <!-- Ambient Layered Lighting System & Grid Overlay -->
+    <div class="ambient-background" aria-hidden="true">
+        <div class="ambient-grid"></div>
+        <div class="ambient-blob blob-primary"></div>
+        <div class="ambient-blob blob-secondary"></div>
+        <div class="ambient-blob blob-tertiary"></div>
+    </div>
+
     <!-- Top Navigation Header -->
     <header class="app-header" id="appHeader">
         <div class="header-left">
@@ -573,10 +581,10 @@
                                 <div class="report-header-row">
                                     <h2 class="pane-title">Executive SOC Incident Response Dossier</h2>
                                     <div class="report-actions">
-                                        <button id="btnCopyReport" class="btn-secondary btn-sm" title="Copy raw Markdown report">📋 Copy Markdown</button>
-                                        <button id="btnDownloadReport" class="btn-secondary btn-sm" title="Download Markdown dossier (.md)">💾 Download .md</button>
-                                        <button id="btnDownloadPdf" class="btn-secondary btn-sm" title="Download executive formatted PDF report">📕 Download PDF</button>
-                                        <button id="btnDownloadDocx" class="btn-secondary btn-sm" title="Download editable Word document (.docx)">📘 Download Word (.docx)</button>
+                                        <button type="button" id="btnCopyReport" class="btn-secondary btn-sm" title="Copy raw Markdown report">📋 Copy Markdown</button>
+                                        <button type="button" id="btnDownloadReport" class="btn-secondary btn-sm" title="Download Markdown dossier (.md)">💾 Download .md</button>
+                                        <button type="button" id="btnDownloadPdf" class="btn-secondary btn-sm" title="Download executive formatted PDF report">📕 Download PDF</button>
+                                        <button type="button" id="btnDownloadDocx" class="btn-secondary btn-sm" title="Download editable Word document (.docx)">📘 Download Word (.docx)</button>
                                     </div>
                                 </div>
                                 <div class="report-markdown-viewer" id="reportViewer">
@@ -597,6 +605,6 @@
     </div>
 
     <!-- Application Script -->
-    <script src="./app.js?v=2.2"></script>
+    <script src="./app.js?v=2.5"></script>
 </body>
 </html>

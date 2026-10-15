@@ -550,8 +550,19 @@ def chat_with_soc_agent(
     # Offline Expert Reasoning Copilot
     q_lower = question.lower()
 
+    # Query 0: Cryptographic Hash / Checksum Inquiry
+    if any(k in q_lower for k in ["hash", "sha256", "sha-256", "md5"]):
+        return (
+            f"### Cryptographic Identity & Verification for `{file_name}`\n\n"
+            f"- **File Name:** `{file_name}`\n"
+            f"- **SHA-256:** `{sha256}`\n"
+            f"- **Current Verdict:** **{verdict}** ({threat_level} severity, {conf:.1%} confidence)\n\n"
+            f"You can verify this hash against threat intelligence feeds (VirusTotal, AlienVault OTX, MISP) "
+            f"or query EDR telemetry for other endpoints containing this hash."
+        )
+
     # Query 1: YARA Rule Generation
-    if "yara" in q_lower or "rule" in q_lower and "signature" in q_lower:
+    if "yara" in q_lower or ("rule" in q_lower and "signature" in q_lower):
         clean_name = re.sub(r"[^a-zA-Z0-9_]", "_", file_name)
         ioc_strings = []
         for i, item in enumerate(iocs[:4]):

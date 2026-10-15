@@ -528,7 +528,7 @@ def extract_html_origin(
             pass
 
     # Inspect Moodle/CMS config or script variables (e.g. wwwroot: "https://learning.uum.edu.my...")
-    cms_match = re.search(r'["\'](?:wwwroot|baseUrl|siteUrl)["\']\s*:\s*["\'](https?://[^"\']+)["\']', text, re.IGNORECASE)
+    cms_match = re.search(r'["\']?(?:wwwroot|baseUrl|siteUrl)["\']?\s*:\s*["\'](https?://[^"\']+)["\']', text, re.IGNORECASE)
     if cms_match:
         try:
             raw_cms_url = cms_match.group(1).replace(r"\/", "/")

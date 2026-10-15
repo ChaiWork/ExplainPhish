@@ -104,7 +104,29 @@ const API_BASE = window.location.hostname.includes('vercel.app')
 
     function init() {
         setupEventListeners();
+        setupSpotlightEffects();
         loadSampleCatalog();
+    }
+
+    /**
+     * Mouse-Tracking Spotlight Effect (Linear / Modern Design System)
+     * Dynamically positions a soft radial ambient glow following the cursor.
+     */
+    function setupSpotlightEffects() {
+        const interactiveCards = document.querySelectorAll('.panel-card, .evidence-tabs-card, .verdict-banner, .hitl-approval-card');
+        interactiveCards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.setProperty('--mouse-x', `-999px`);
+                card.style.setProperty('--mouse-y', `-999px`);
+            });
+        });
     }
 
     function setupEventListeners() {
@@ -1017,26 +1039,26 @@ const API_BASE = window.location.hostname.includes('vercel.app')
     }
 
     async function downloadReportPdf() {
-        if (!activeInvestigationData) {
-            showToast('No investigation report available to export', '⚠️');
-            return;
-        }
         showToast('Compiling executive PDF report...', '⏳');
         try {
+            const payload = (activeInvestigationData && typeof activeInvestigationData === 'object')
+                ? activeInvestigationData
+                : {};
             const resp = await fetch(`${API_BASE}/api/export/pdf`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(activeInvestigationData),
+                body: JSON.stringify(payload),
             });
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({ detail: 'PDF compilation error' }));
-                throw new Error(err.detail || 'PDF download failed');
+                const detailMsg = typeof err.detail === 'string' ? err.detail : (Array.isArray(err.detail) ? err.detail.map(d => d.msg || JSON.stringify(d)).join(', ') : JSON.stringify(err.detail || 'PDF download failed'));
+                throw new Error(detailMsg);
             }
             const blob = await resp.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            const hash = (activeInvestigationData.file_hash_sha256 || 'report').substring(0, 10);
-            const rawName = activeInvestigationData.file_name || 'incident';
+            const hash = (payload.file_hash_sha256 || 'report').substring(0, 10);
+            const rawName = payload.file_name || 'incident';
             const cleanName = rawName.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
             a.href = url;
             a.download = `SOC_Report_${hash}_${cleanName}.pdf`;
@@ -1051,26 +1073,26 @@ const API_BASE = window.location.hostname.includes('vercel.app')
     }
 
     async function downloadReportDocx() {
-        if (!activeInvestigationData) {
-            showToast('No investigation report available to export', '⚠️');
-            return;
-        }
         showToast('Compiling Microsoft Word document...', '⏳');
         try {
+            const payload = (activeInvestigationData && typeof activeInvestigationData === 'object')
+                ? activeInvestigationData
+                : {};
             const resp = await fetch(`${API_BASE}/api/export/docx`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(activeInvestigationData),
+                body: JSON.stringify(payload),
             });
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({ detail: 'Word compilation error' }));
-                throw new Error(err.detail || 'Word download failed');
+                const detailMsg = typeof err.detail === 'string' ? err.detail : (Array.isArray(err.detail) ? err.detail.map(d => d.msg || JSON.stringify(d)).join(', ') : JSON.stringify(err.detail || 'Word download failed'));
+                throw new Error(detailMsg);
             }
             const blob = await resp.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            const hash = (activeInvestigationData.file_hash_sha256 || 'report').substring(0, 10);
-            const rawName = activeInvestigationData.file_name || 'incident';
+            const hash = (payload.file_hash_sha256 || 'report').substring(0, 10);
+            const rawName = payload.file_name || 'incident';
             const cleanName = rawName.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
             a.href = url;
             a.download = `SOC_Report_${hash}_${cleanName}.docx`;

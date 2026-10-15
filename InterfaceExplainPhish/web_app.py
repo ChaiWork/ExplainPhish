@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -65,6 +65,7 @@ async def add_no_cache_headers(request, call_next):
 STATIC_DIR = _HERE / "web"
 DOWNLOADS_DIR = _HERE / "downloads"
 DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+_LATEST_INVESTIGATION_STATE: Dict[str, Any] = {}
 
 
 class URLAnalyzeRequest(BaseModel):
@@ -143,7 +144,10 @@ def api_pipeline_resume(req: AnalystResumeRequest):
                 "analyst_id": req.analyst_id or "SOC-Analyst",
             },
         )
-        return sanitize_result(result)
+        res_clean = sanitize_result(result)
+        _LATEST_INVESTIGATION_STATE.clear()
+        _LATEST_INVESTIGATION_STATE.update(res_clean)
+        return res_clean
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to resume pipeline: {str(exc)}")
 
@@ -157,10 +161,52 @@ def api_pipeline_status(thread_id: str):
     return sanitize_result(st)
 
 
-@app.post("/api/export/pdf")
-def api_export_pdf(state: Dict[str, Any]):
-    """Compile and download executive PDF incident report."""
+async def resolve_export_state(request: Request, thread_id: Optional[str] = None) -> Dict[str, Any]:
+    """Safely extracts and resolves investigation state from incoming request body, query params, or in-memory cache."""
+    state: Dict[str, Any] = {}
+
+    # 1. Try to read JSON body if POST/PUT
+    if request.method in ("POST", "PUT"):
+        try:
+            body = await request.body()
+            if body:
+                data = json.loads(body.decode("utf-8", errors="replace"))
+                if isinstance(data, dict):
+                    state = data.get("state") if isinstance(data.get("state"), dict) else data
+                elif isinstance(data, str) and not thread_id:
+                    thread_id = data
+        except Exception:
+            state = {}
+
+    # 2. Check query params or body for thread_id
+    tid = thread_id or request.query_params.get("thread_id") or (state.get("thread_id") if isinstance(state, dict) else None)
+    if tid:
+        pipeline_state = get_pipeline_state(tid)
+        if pipeline_state:
+            merged = dict(pipeline_state)
+            merged.update(state)
+            return merged
+
+    # 3. If state is empty or missing key report data, fallback to latest cached state if available
+    if not state or not state.get("final_verdict"):
+        if _LATEST_INVESTIGATION_STATE:
+            merged = dict(_LATEST_INVESTIGATION_STATE)
+            merged.update(state)
+            return merged
+
+    return state or {}
+
+
+@app.api_route("/api/export/pdf", methods=["GET", "POST"])
+async def api_export_pdf(
+    request: Request,
+    thread_id: Optional[str] = None,
+):
+    """Compile and download executive PDF incident report.
+    Supports POST (with JSON state body or thread_id) and GET (with ?thread_id=... or latest cached report).
+    """
     try:
+        state = await resolve_export_state(request, thread_id)
         pdf_bytes = generate_pdf_report(state)
         raw_name = state.get("file_name", "incident")
         clean_name = re.sub(r"[^a-zA-Z0-9_\-\.]", "_", raw_name)
@@ -173,10 +219,16 @@ def api_export_pdf(state: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"PDF generation error: {str(exc)}")
 
 
-@app.post("/api/export/docx")
-def api_export_docx(state: Dict[str, Any]):
-    """Compile and download executive Microsoft Word (.docx) incident report."""
+@app.api_route("/api/export/docx", methods=["GET", "POST"])
+async def api_export_docx(
+    request: Request,
+    thread_id: Optional[str] = None,
+):
+    """Compile and download executive Microsoft Word (.docx) incident report.
+    Supports POST (with JSON state body or thread_id) and GET (with ?thread_id=... or latest cached report).
+    """
     try:
+        state = await resolve_export_state(request, thread_id)
         docx_bytes = generate_docx_report(state)
         raw_name = state.get("file_name", "incident")
         clean_name = re.sub(r"[^a-zA-Z0-9_\-\.]", "_", raw_name)
@@ -252,6 +304,8 @@ async def api_analyze_file(
             auto_approve=should_auto_approve,
         )
         clean_result = sanitize_result(result)
+        _LATEST_INVESTIGATION_STATE.clear()
+        _LATEST_INVESTIGATION_STATE.update(clean_result)
         return clean_result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Pipeline error: {str(exc)}")
@@ -296,11 +350,17 @@ def api_analyze_url(req: URLAnalyzeRequest):
                 content_type = resp.headers.get("Content-Type", "")
         except Exception as exc:
             err_msg = str(exc)
-            return generate_inaccessible_domain_triage(raw_url, err_msg)
+            inaccessible = generate_inaccessible_domain_triage(raw_url, err_msg)
+            _LATEST_INVESTIGATION_STATE.clear()
+            _LATEST_INVESTIGATION_STATE.update(inaccessible)
+            return inaccessible
     except Exception as exc:
         err_msg = str(exc)
         if any(term in err_msg.lower() for term in ("nodename nor servname", "name or service not known", "getaddrinfo failed", "timed out", "connection refused", "network is unreachable", "ssl", "certificate")):
-            return generate_inaccessible_domain_triage(raw_url, err_msg)
+            inaccessible = generate_inaccessible_domain_triage(raw_url, err_msg)
+            _LATEST_INVESTIGATION_STATE.clear()
+            _LATEST_INVESTIGATION_STATE.update(inaccessible)
+            return inaccessible
         raise HTTPException(status_code=502, detail=f"Failed to fetch remote URL: {exc}")
 
     ext = Path(parsed.path).suffix.lower()
@@ -321,6 +381,8 @@ def api_analyze_url(req: URLAnalyzeRequest):
             auto_approve=should_auto_approve,
         )
         clean_result = sanitize_result(result)
+        _LATEST_INVESTIGATION_STATE.clear()
+        _LATEST_INVESTIGATION_STATE.update(clean_result)
         return clean_result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Pipeline error: {str(exc)}")
@@ -342,6 +404,8 @@ def api_analyze_sample(req: SampleAnalyzeRequest):
             auto_approve=should_auto_approve,
         )
         clean_result = sanitize_result(result)
+        _LATEST_INVESTIGATION_STATE.clear()
+        _LATEST_INVESTIGATION_STATE.update(clean_result)
         return clean_result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Pipeline error: {str(exc)}")
