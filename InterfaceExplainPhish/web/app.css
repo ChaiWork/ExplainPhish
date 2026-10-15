@@ -1311,3 +1311,323 @@ body {
     border-color: var(--cyan-primary);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Human-in-the-Loop (HITL) Styles
+   ───────────────────────────────────────────────────────────────────────── */
+
+.hitl-toggle-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hitl-toggle-container:hover {
+    border-color: rgba(245, 158, 11, 0.5);
+    background: rgba(15, 23, 42, 0.9);
+}
+
+.hitl-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.hitl-badge-icon {
+    font-size: 18px;
+}
+
+.hitl-toggle-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.hitl-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #FBBF24;
+    letter-spacing: 0.5px;
+}
+
+.hitl-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.hitl-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #F59E0B;
+    cursor: pointer;
+}
+
+/* HITL Approval Card */
+.hitl-approval-card {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1.5px solid #F59E0B !important;
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
+    margin-bottom: 20px;
+    animation: hitlPulseGlow 3s infinite ease-in-out;
+}
+
+@keyframes hitlPulseGlow {
+    0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.2); }
+    50% { box-shadow: 0 0 28px rgba(245, 158, 11, 0.45); }
+}
+
+.hitl-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background: rgba(245, 158, 11, 0.15);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.hitl-card-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #FDE68A;
+}
+
+.pulsing-amber-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #F59E0B;
+    box-shadow: 0 0 10px #F59E0B;
+    animation: blink 1.2s infinite ease-in-out;
+}
+
+.hitl-thread-id {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #CBD5E1;
+}
+
+.hitl-card-body {
+    padding: 16px 18px;
+}
+
+.hitl-alert-box {
+    display: flex;
+    gap: 12px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px dashed rgba(245, 158, 11, 0.4);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 14px;
+}
+
+.hitl-alert-icon {
+    font-size: 22px;
+}
+
+.hitl-alert-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #FDE68A;
+    margin-bottom: 3px;
+}
+
+.hitl-alert-desc {
+    font-size: 11px;
+    color: #E2E8F0;
+    line-height: 1.4;
+}
+
+.hitl-review-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border-medium);
+}
+
+.hitl-review-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.hitl-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.hitl-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cyan-primary);
+}
+
+.hitl-group-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #FDE68A;
+    margin-bottom: 8px;
+}
+
+.hitl-decision-radios {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.radio-card {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid var(--border-medium);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.radio-card input {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    accent-color: #F59E0B;
+}
+
+.radio-card.active {
+    border-color: #F59E0B;
+    background: rgba(245, 158, 11, 0.12);
+}
+
+.radio-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #FFF;
+    margin-bottom: 2px;
+}
+
+.radio-desc {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.hitl-override-panel {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.hitl-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.hitl-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hitl-field label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #CBD5E1;
+}
+
+.hitl-select {
+    background: #090D16;
+    border: 1px solid var(--border-medium);
+    border-radius: 4px;
+    padding: 6px 10px;
+    color: #FDE68A;
+    font-size: 11px;
+    outline: none;
+}
+
+.hitl-notes-field {
+    margin-bottom: 14px;
+}
+
+.hitl-notes-field label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #CBD5E1;
+    margin-bottom: 4px;
+}
+
+.hitl-textarea {
+    width: 100%;
+    min-height: 55px;
+    background: #090D16;
+    border: 1px solid var(--border-medium);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #FFF;
+    font-size: 11px;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.hitl-textarea:focus {
+    border-color: #F59E0B;
+}
+
+.hitl-btn-resume {
+    width: 100%;
+    padding: 11px;
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
+    border: 1px solid #FBBF24 !important;
+    color: #000 !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+}
+
+.hitl-btn-resume:hover {
+    background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%) !important;
+    box-shadow: 0 0 22px rgba(245, 158, 11, 0.6);
+}
+
+/* Stepper Interrupted State */
+.stepper-row.interrupted .step-glyph {
+    color: #F59E0B;
+}
+
+.stepper-row.interrupted .step-name {
+    color: #FBBF24;
+}
+
+.stepper-row.interrupted .step-sub {
+    color: #FDE68A;
+}
+

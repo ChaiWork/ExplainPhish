@@ -8,7 +8,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/Orchestration-LangGraph%20v0.2+-orange.svg)](https://langchain-ai.github.io/langgraph/)
 [![SHAP](https://img.shields.io/badge/Explainability-SHAP%20XAI-green.svg)](https://shap.readthedocs.io/)
-[![Tests](https://img.shields.io/badge/Tests-23%20Passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-26%20Passed-brightgreen.svg)](tests/)
 [![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED.svg?logo=docker&logoColor=white)](Dockerfile)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -68,8 +68,9 @@ Security Operations Centres (SOCs) face three compounding bottlenecks:
 | **Deep Forensics & IOCs** | Extracts exfiltration POST endpoints, stream compression filters, hidden `<iframe>` tags, embedded `vbaProject.bin` code, and DDE formulas. |
 | **MITRE ATT&CK & SOAR** | Maps detected indicators to standardized MITRE techniques (T1566, T1204, T1059, T1137) and generates tiered, prescriptive SOAR playbooks (Endpoint Isolation, Firewall/EDR blocks, Sandbox quarantine). |
 | **AI Cognitive Copilot** | Uses frontier cloud LLMs (via Groq API with Meta Llama-Prompt-Guard-2-22m / Qwen / Llama-3) to analyze pretext psychology, urgency cues, and draft executive threat briefings (with automatic heuristic fallback). |
+| **Human-in-the-Loop (HITL)** | Integrates LangGraph `interrupt()` and `Command(resume=...)` to pause execution on borderline/ambiguous samples for Tier-2 SOC analyst verification or verdict override before finalizing SOAR actions and incident reports. |
 | **Multi-Format Export** | Exports comprehensive, audit-ready Incident Response reports in **Markdown (`.md`)**, **Adobe PDF (`.pdf`)**, and **Microsoft Word (`.docx`)**. |
-| **Modern SOC Web Workstation** | Dark-cyber glassmorphic interface with real-time pipeline stepper telemetry, consensus radar, XAI driver tables, and interactive Copilot chat. |
+| **Modern SOC Web Workstation** | Dark-cyber glassmorphic interface with real-time pipeline stepper telemetry, consensus radar, XAI driver tables, interactive Copilot chat, and HITL verification modal. |
 
 ---
 
@@ -84,14 +85,14 @@ Security Operations Centres (SOCs) face three compounding bottlenecks:
 | **Document Parsers** | BeautifulSoup4, pypdf, pdfminer.six, openpyxl, xlrd, olefile, oletools | Passive static extraction of OOXML archives, PDF streams, and OLE2 containers |
 | **Cognitive Intelligence**| Groq Cloud API, Llama-Prompt-Guard, Qwen, python-dotenv | Semantic threat reasoning, pretext analysis, and executive threat drafting |
 | **Report Generation** | reportlab, python-docx | Dynamic compilation of audit-ready PDF and DOCX incident dossiers |
-| **Testing & QA** | pytest, httpx, anyio | Automated regression, API validation, and extraction test suite (23 tests) |
+| **Testing & QA** | pytest, httpx, anyio | Automated regression, API validation, and extraction test suite (26 tests) |
 | **Containerization** | Docker, Docker Compose | Least-privilege non-root execution (`appuser`, UID 1000) for production deployment |
 
 ---
 
 ## Architecture
 
-ExplainPhish coordinates an autonomous, stateful **8-stage LangGraph workflow**:
+ExplainPhish coordinates an autonomous, stateful **9-stage LangGraph workflow** with Human-in-the-Loop verification:
 
 ```mermaid
 flowchart TD
@@ -115,9 +116,13 @@ flowchart TD
     N5 -->|Dual-Gate Check| Gate{0 Execution Vectors?}
     Gate -->|Yes| Override[Safety Override: Clean File]
     Gate -->|No| N6
-    Override --> N6[Stage 6: MITRE ATT&CK & SOAR Playbooks]
+    Override --> N6[Stage 6: MITRE ATT&CK & Proposed SOAR Playbooks]
     
-    N6 --> N7[Stage 7: AI Cognitive Triage & Pretext Copilot]
+    N6 --> HITL{Borderline Sample?}
+    HITL -->|Yes: LangGraph interrupt| N_HITL[Node 6.5: Human-in-the-Loop Analyst Verification]
+    N_HITL -->|Analyst Approves / Overrides| N7[Stage 7: AI Cognitive Triage & Pretext Copilot]
+    HITL -->|No: Auto-Pass| N7
+    
     N7 -->|LLM / Heuristic Reasoner| N8[Stage 8: Multi-Format SOC Incident Report]
     N8 --> End([Audit-Ready Dossier: MD / PDF / DOCX])
 ```

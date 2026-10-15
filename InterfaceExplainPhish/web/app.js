@@ -46,9 +46,26 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         explainability: document.getElementById('step-explainability'),
         deep_threat_analysis: document.getElementById('step-deep_threat_analysis'),
         mitre_mapping: document.getElementById('step-mitre_mapping'),
+        analyst_review: document.getElementById('step-analyst_review'),
         cognitive_triage: document.getElementById('step-cognitive_triage'),
         soc_report: document.getElementById('step-soc_report'),
     };
+
+    // Human-in-the-Loop Elements
+    const chkHitlMode = document.getElementById('chkHitlMode');
+    const hitlApprovalCard = document.getElementById('hitlApprovalCard');
+    const hitlThreadId = document.getElementById('hitlThreadId');
+    const hitlBorderlineReasons = document.getElementById('hitlBorderlineReasons');
+    const hitlCurrentVerdict = document.getElementById('hitlCurrentVerdict');
+    const hitlThreatLevel = document.getElementById('hitlThreatLevel');
+    const hitlConfidence = document.getElementById('hitlConfidence');
+    const labelDecisionApprove = document.getElementById('labelDecisionApprove');
+    const labelDecisionOverride = document.getElementById('labelDecisionOverride');
+    const hitlOverridePanel = document.getElementById('hitlOverridePanel');
+    const selectOverrideVerdict = document.getElementById('selectOverrideVerdict');
+    const selectOverrideThreat = document.getElementById('selectOverrideThreat');
+    const txtAnalystNotes = document.getElementById('txtAnalystNotes');
+    const btnResumePipeline = document.getElementById('btnResumePipeline');
 
     // Metadata Card
     const metadataCard = document.getElementById('metadataCard');
@@ -139,6 +156,28 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         // Sample Select
         sampleSelect.addEventListener('change', handleSampleChosen);
         btnRefreshSamples.addEventListener('click', loadSampleCatalog);
+
+        // HITL Decision Radio Toggles
+        if (labelDecisionApprove && labelDecisionOverride) {
+            labelDecisionApprove.addEventListener('click', () => {
+                labelDecisionApprove.classList.add('active');
+                labelDecisionOverride.classList.remove('active');
+                const inp = labelDecisionApprove.querySelector('input');
+                if (inp) inp.checked = true;
+                if (hitlOverridePanel) hitlOverridePanel.classList.add('hidden');
+            });
+            labelDecisionOverride.addEventListener('click', () => {
+                labelDecisionOverride.classList.add('active');
+                labelDecisionApprove.classList.remove('active');
+                const inp = labelDecisionOverride.querySelector('input');
+                if (inp) inp.checked = true;
+                if (hitlOverridePanel) hitlOverridePanel.classList.remove('hidden');
+            });
+        }
+
+        if (btnResumePipeline) {
+            btnResumePipeline.addEventListener('click', handleResumePipeline);
+        }
 
         // Primary Run Button
         btnRunInvestigation.addEventListener('click', runInvestigation);
@@ -284,13 +323,16 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         if (btnRunInvestigation.disabled) return;
 
         setAnalyzingUI();
+        if (hitlApprovalCard) hitlApprovalCard.classList.add('hidden');
 
         try {
             let resp;
+            const useHitl = chkHitlMode ? chkHitlMode.checked : true;
             if (currentMode === 'file') {
                 const formData = new FormData();
                 formData.append('file', selectedFile);
-                resp = await fetch(`${API_BASE}/api/analyze/file`, {
+                formData.append('hitl', useHitl ? 'true' : 'false');
+                resp = await fetch(`${API_BASE}/api/analyze/file?hitl=${useHitl}`, {
                     method: 'POST',
                     body: formData,
                 });
@@ -303,7 +345,7 @@ const API_BASE = window.location.hostname.includes('vercel.app')
                 resp = await fetch(`${API_BASE}/api/analyze/url`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: targetUrl }),
+                    body: JSON.stringify({ url: targetUrl, hitl: useHitl }),
                 });
             }
 
@@ -321,11 +363,13 @@ const API_BASE = window.location.hostname.includes('vercel.app')
 
     async function runSampleAnalysis(samplePath) {
         setAnalyzingUI();
+        if (hitlApprovalCard) hitlApprovalCard.classList.add('hidden');
         try {
+            const useHitl = chkHitlMode ? chkHitlMode.checked : true;
             const resp = await fetch(`${API_BASE}/api/analyze/sample`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sample_path: samplePath }),
+                body: JSON.stringify({ sample_path: samplePath, hitl: useHitl }),
             });
 
             if (!resp.ok) {
@@ -340,6 +384,54 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         }
     }
 
+    async function handleResumePipeline() {
+        if (!activeInvestigationData || !activeInvestigationData.thread_id) {
+            showToast('No active thread to resume', '❌');
+            return;
+        }
+
+        const decisionRadio = document.querySelector('input[name="analystDecision"]:checked');
+        const decision = decisionRadio ? decisionRadio.value : 'APPROVE';
+        const notes = txtAnalystNotes ? txtAnalystNotes.value.trim() : '';
+        const thread_id = activeInvestigationData.thread_id;
+
+        btnResumePipeline.disabled = true;
+        btnResumePipeline.innerHTML = '<span>⏳</span> Resuming LangGraph Pipeline...';
+
+        try {
+            const payload = {
+                thread_id: thread_id,
+                decision: decision,
+                verdict: decision === 'OVERRIDE' && selectOverrideVerdict ? selectOverrideVerdict.value : null,
+                threat_level: decision === 'OVERRIDE' && selectOverrideThreat ? selectOverrideThreat.value : null,
+                notes: notes,
+                analyst_id: 'SOC-Analyst-Tier2',
+            };
+
+            const resp = await fetch(`${API_BASE}/api/pipeline/resume`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({ detail: 'Resume failed' }));
+                throw new Error(errData.detail || 'Resume failed');
+            }
+
+            const data = await resp.json();
+            btnResumePipeline.disabled = false;
+            btnResumePipeline.innerHTML = '<span>🚀</span> Submit Decision &amp; Finalize Triage';
+            if (hitlApprovalCard) hitlApprovalCard.classList.add('hidden');
+            handleInvestigationSuccess(data);
+            showToast(`Verdict ${decision === 'OVERRIDE' ? 'overridden' : 'approved'} by analyst`, '✅');
+        } catch (err) {
+            btnResumePipeline.disabled = false;
+            btnResumePipeline.innerHTML = '<span>🚀</span> Submit Decision &amp; Finalize Triage';
+            showToast(`Resume error: ${err.message}`, '❌');
+        }
+    }
+
     function setAnalyzingUI() {
         btnRunInvestigation.disabled = true;
         btnRunText.textContent = 'Investigating...';
@@ -348,6 +440,7 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         // Reset Stepper rows to running animation
         Object.keys(stepperRows).forEach(key => {
             const row = stepperRows[key];
+            if (!row) return;
             row.className = 'stepper-row running';
             row.querySelector('.step-glyph').textContent = '[>]';
         });
@@ -358,23 +451,65 @@ const API_BASE = window.location.hostname.includes('vercel.app')
         threatSeverityBadge.textContent = 'IN PROGRESS';
         confPercentage.textContent = '50.0%';
         confProgressFill.style.width = '50%';
-        actionText.textContent = 'Executing 7-stage autonomous LangGraph SOC workflow...';
+        actionText.textContent = 'Executing 8-stage autonomous LangGraph SOC workflow...';
     }
 
     function handleInvestigationSuccess(data) {
         activeInvestigationData = data;
         btnRunInvestigation.disabled = false;
         btnRunText.textContent = 'Run Investigation';
+
+        const isInterrupted = Boolean(data.is_interrupted || data.status === 'AWAITING_ANALYST_APPROVAL');
+
+        if (isInterrupted) {
+            stepperStatusText.textContent = 'Paused: Awaiting Human Analyst Sign-off';
+            if (hitlApprovalCard) {
+                hitlApprovalCard.classList.remove('hidden');
+                hitlApprovalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            if (hitlThreadId) hitlThreadId.textContent = `Thread: ${data.thread_id || 'N/A'}`;
+            if (hitlBorderlineReasons) {
+                const reasons = (data.review_request && data.review_request.borderline_reasons) || data.borderline_reasons || ['Ambiguous threat indicators detected'];
+                hitlBorderlineReasons.innerHTML = reasons.map(r => `<div>• ${escapeHtml(r)}</div>`).join('');
+            }
+            if (hitlCurrentVerdict) {
+                const cv = (data.review_request && data.review_request.current_verdict) || data.final_verdict || data.ensemble_verdict || 'BORDERLINE';
+                hitlCurrentVerdict.textContent = cv;
+            }
+            if (hitlThreatLevel) {
+                const tl = (data.review_request && data.review_request.threat_level) || data.threat_level || 'MEDIUM';
+                hitlThreatLevel.textContent = tl;
+            }
+            if (hitlConfidence) {
+                const conf = (data.review_request && data.review_request.confidence_score) || data.confidence_score || 0;
+                hitlConfidence.textContent = `${(conf * 100).toFixed(1)}%`;
+            }
+
+            // Update Stepper with interrupted state
+            updateStepperOutcomes(data, true);
+            updateMetadataCard(data);
+            updateVerdictBanner(data, true);
+            renderOverviewTab(data);
+            renderModelsTab(data);
+            renderXaiTab(data);
+            renderForensicsTab(data);
+            renderMitreTab(data);
+            showToast('⚠️ Borderline sample requires SOC analyst sign-off', '⚠️');
+            return;
+        }
+
+        // Normal / Completed Execution
+        if (hitlApprovalCard) hitlApprovalCard.classList.add('hidden');
         stepperStatusText.textContent = 'Investigation Complete';
 
         // 1. Update Stepper with actual stage outcomes and rules
-        updateStepperOutcomes(data);
+        updateStepperOutcomes(data, false);
 
         // 2. Update Metadata Card
         updateMetadataCard(data);
 
         // 3. Update Verdict Hero Banner
-        updateVerdictBanner(data);
+        updateVerdictBanner(data, false);
 
         // 4. Update Tab Contents
         renderOverviewTab(data);
@@ -405,7 +540,7 @@ const API_BASE = window.location.hostname.includes('vercel.app')
     // Stepper UI Renderer
     // ─────────────────────────────────────────────────────────────────────────
 
-    function updateStepperOutcomes(data) {
+    function updateStepperOutcomes(data, isInterrupted = false) {
         const rules = data.applied_rules || {};
         const isBorderline = data.is_borderline;
         const deepAdj = (data.deep_analysis && data.deep_analysis.verdict_adjustment) || 'NONE';
@@ -472,6 +607,29 @@ const API_BASE = window.location.hostname.includes('vercel.app')
             `${nMitre} techniques • Rule: ATT&CK & SOAR`,
             rules.mitre_mapping || `Rule 6: Mapped ${nMitre} MITRE techniques and SOAR playbooks.`);
 
+        // Stage 6.5: Analyst Verification (HITL)
+        const rev = data.analyst_review || {};
+        if (isInterrupted) {
+            setStepRow('analyst_review', 'interrupted', '[!]',
+                'Awaiting Sign-off • LangGraph Interrupt',
+                'Analyst verification required before finalizing SOAR actions.');
+            setStepRow('cognitive_triage', 'running', '[...]', 'Pending sign-off', 'Awaiting analyst sign-off');
+            setStepRow('soc_report', 'running', '[...]', 'Pending sign-off', 'Awaiting analyst sign-off');
+            return;
+        } else if (rev.status === 'OVERRIDDEN') {
+            setStepRow('analyst_review', 'borderline', '[!]',
+                `Overridden (${rev.decision}) • Sign-off: ${rev.analyst_id || 'Analyst'}`,
+                rules.analyst_review || 'Rule 6.5: Verdict overridden by SOC analyst.');
+        } else if (rev.status === 'APPROVED') {
+            setStepRow('analyst_review', 'completed', '[v]',
+                `Approved • Sign-off: ${rev.analyst_id || 'Analyst'}`,
+                rules.analyst_review || 'Rule 6.5: Verdict approved by SOC analyst.');
+        } else {
+            setStepRow('analyst_review', 'completed', '[v]',
+                'Auto-Approved • Rule: Policy Clearance',
+                rules.analyst_review || 'Rule 6.5: Non-borderline consensus auto-approved.');
+        }
+
         // Stage 7: Cognitive AI Triage
         const llmInfo = data.llm_triage || {};
         const prov = llmInfo.provider || 'Cognitive AI';
@@ -511,7 +669,22 @@ const API_BASE = window.location.hostname.includes('vercel.app')
     // Verdict Hero Banner
     // ─────────────────────────────────────────────────────────────────────────
 
-    function updateVerdictBanner(data) {
+    function updateVerdictBanner(data, isInterrupted = false) {
+        if (isInterrupted) {
+            const v = (data.review_request && data.review_request.current_verdict) || data.final_verdict || data.ensemble_verdict || 'AWAITING APPROVAL';
+            const threat = (data.review_request && data.review_request.threat_level) || data.threat_level || 'REVIEW REQUIRED';
+            const conf = (data.review_request && data.review_request.confidence_score) || data.confidence_score || 0;
+            const pct = (conf * 100).toFixed(1) + '%';
+
+            verdictBadge.textContent = 'PAUSED: AWAITING ANALYST APPROVAL';
+            threatSeverityBadge.textContent = threat.toUpperCase();
+            confPercentage.textContent = pct;
+            confProgressFill.style.width = pct;
+            actionText.textContent = 'LangGraph interrupted at Node 6.5. Review borderline evidence and approve or override above.';
+            verdictBanner.className = 'verdict-banner banner-suspicious';
+            return;
+        }
+
         const verdict = data.final_verdict || data.ensemble_verdict || 'UNKNOWN';
         const threat = data.threat_level || 'UNKNOWN';
         const conf = data.confidence_score || 0;
@@ -553,7 +726,7 @@ const API_BASE = window.location.hostname.includes('vercel.app')
 
         const tbody = document.getElementById('tbodyAppliedRules');
         const rules = data.applied_rules || {};
-        const keys = ['intake_safety', 'feature_extraction', 'ml_ensemble', 'explainability', 'deep_threat_analysis', 'mitre_mapping', 'soc_report'];
+        const keys = ['intake_safety', 'feature_extraction', 'ml_ensemble', 'explainability', 'deep_threat_analysis', 'mitre_mapping', 'analyst_review', 'cognitive_triage', 'soc_report'];
 
         const rows = keys.filter(k => rules[k]).map(k => {
             const title = k.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());

@@ -367,6 +367,109 @@ class TestLLMCognitiveCopilot:
         assert len(response.content) > 1000
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 7. Human-in-the-Loop (HITL) Workflow & Analyst Verification
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestHumanInTheLoop:
+    def test_hitl_borderline_interrupt_and_approve(self, client: TestClient, sample_html_content: bytes):
+        """
+        Verify that borderline samples with hitl=true pause on LangGraph interrupt(),
+        return AWAITING_ANALYST_APPROVAL with thread_id, and complete successfully
+        when the analyst approves via /api/pipeline/resume.
+        """
+        files = {
+            "file": ("borderline_login.html", io.BytesIO(sample_html_content), "text/html")
+        }
+        # Run with HITL enabled
+        response = client.post("/api/analyze/file?hitl=true", files=files)
+        assert response.status_code == 200
+        data = response.json()
+
+        # Should be interrupted and awaiting approval
+        assert data.get("is_interrupted") is True
+        assert data.get("status") == "AWAITING_ANALYST_APPROVAL"
+        assert "thread_id" in data
+        thread_id = data["thread_id"]
+        assert "review_request" in data
+        req_data = data["review_request"]
+        assert "is_borderline" in req_data
+        assert req_data["is_borderline"] is True
+
+        # Check status endpoint before resume
+        status_resp = client.get(f"/api/pipeline/status/{thread_id}")
+        assert status_resp.status_code == 200
+        status_data = status_resp.json()
+        assert status_data["thread_id"] == thread_id
+
+        # Resume with Analyst Approval
+        resume_payload = {
+            "thread_id": thread_id,
+            "decision": "APPROVE",
+            "notes": "Verified same-origin authentication form matches internal policy.",
+            "analyst_id": "SOC-Tier2-Analyst",
+        }
+        resume_resp = client.post("/api/pipeline/resume", json=resume_payload)
+        assert resume_resp.status_code == 200
+        resumed_data = resume_resp.json()
+
+        # Workflow must now be complete
+        assert resumed_data.get("is_interrupted") is False
+        assert resumed_data.get("status") == "COMPLETED"
+        assert "analyst_review" in resumed_data
+        review = resumed_data["analyst_review"]
+        assert review["status"] == "APPROVED"
+        assert review["decision"] == "APPROVE"
+        assert review["analyst_id"] == "SOC-Tier2-Analyst"
+        assert "soc_report_markdown" in resumed_data
+        assert "Human-in-the-Loop (HITL) Analyst Verification" in resumed_data["soc_report_markdown"]
+
+    def test_hitl_borderline_interrupt_and_override(self, client: TestClient, sample_html_content: bytes):
+        """
+        Verify that an analyst can override a borderline/screened verdict to MALICIOUS
+        and enforce containment actions during resume.
+        """
+        files = {
+            "file": ("borderline_suspicious.html", io.BytesIO(sample_html_content), "text/html")
+        }
+        response = client.post("/api/analyze/file?hitl=true", files=files)
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("is_interrupted") is True
+        thread_id = data["thread_id"]
+
+        # Resume with Analyst OVERRIDE
+        resume_payload = {
+            "thread_id": thread_id,
+            "decision": "OVERRIDE",
+            "verdict": "MALICIOUS (Analyst Override)",
+            "threat_level": "CRITICAL",
+            "notes": "Analyst identified targeted credential harvest impersonation campaign.",
+            "analyst_id": "Lead-SOC-Commander",
+        }
+        resume_resp = client.post("/api/pipeline/resume", json=resume_payload)
+        assert resume_resp.status_code == 200
+        resumed_data = resume_resp.json()
+
+        assert resumed_data.get("status") == "COMPLETED"
+        assert resumed_data.get("final_verdict") == "MALICIOUS (Analyst Override)"
+        assert resumed_data.get("threat_level") == "CRITICAL"
+        review = resumed_data["analyst_review"]
+        assert review["status"] == "OVERRIDDEN"
+        assert review["decision"] == "OVERRIDE"
+        assert review["analyst_id"] == "Lead-SOC-Commander"
+
+        # Verify SOAR playbooks include containment action
+        actions = resumed_data.get("soc_playbook_actions", [])
+        assert any("Containment" in a.get("stage", "") for a in actions)
+
+    def test_hitl_invalid_thread_returns_404(self, client: TestClient):
+        response = client.get("/api/pipeline/status/non_existent_thread_xyz_999")
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"]
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main(["-v", __file__]))
 

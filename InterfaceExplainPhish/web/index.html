@@ -88,6 +88,18 @@
                         <div class="url-hint">Agent will download the live DOM under anti-SSRF sandbox bounds.</div>
                     </div>
 
+                    <!-- HITL Verification Toggle -->
+                    <div class="hitl-toggle-container">
+                        <label class="hitl-toggle-label" for="chkHitlMode">
+                            <span class="hitl-badge-icon">🛡️</span>
+                            <div class="hitl-toggle-text">
+                                <span class="hitl-title">Human-in-the-Loop Mode</span>
+                                <span class="hitl-sub">Pause on borderline samples for analyst review</span>
+                            </div>
+                        </label>
+                        <input type="checkbox" id="chkHitlMode" class="hitl-checkbox" checked />
+                    </div>
+
                     <!-- Primary Action Button -->
                     <button id="btnRunInvestigation" class="btn-primary" disabled>
                         <span class="btn-icon-run">⚡</span>
@@ -157,6 +169,15 @@
                             </div>
                         </div>
 
+                        <!-- Node 6.5 / HITL -->
+                        <div class="stepper-row" id="step-analyst_review" data-node="analyst_review">
+                            <span class="step-glyph">[ ]</span>
+                            <div class="step-text">
+                                <div class="step-name">Analyst Verification (HITL)</div>
+                                <div class="step-sub">Human sign-off &amp; verdict override</div>
+                            </div>
+                        </div>
+
                         <!-- Node 7 -->
                         <div class="stepper-row" id="step-cognitive_triage" data-node="cognitive_triage">
                             <span class="step-glyph">[ ]</span>
@@ -204,6 +225,97 @@
             <!-- Right Column: Evidence & Intelligence Suite -->
             <section class="evidence-panel" id="evidencePanel" aria-labelledby="headingEvidence">
                 <h2 id="headingEvidence" class="sr-only">Threat Evidence &amp; Intelligence Suite</h2>
+
+                <!-- Human-in-the-Loop Analyst Verification Card (Active when Interrupted) -->
+                <div class="panel-card hitl-approval-card hidden" id="hitlApprovalCard">
+                    <div class="hitl-card-header">
+                        <div class="hitl-card-badge">
+                            <span class="pulsing-amber-dot"></span>
+                            <span>HUMAN-IN-THE-LOOP VERIFICATION REQUIRED</span>
+                        </div>
+                        <span class="hitl-thread-id" id="hitlThreadId">Thread: --</span>
+                    </div>
+
+                    <div class="hitl-card-body">
+                        <div class="hitl-alert-box">
+                            <div class="hitl-alert-icon">⚠️</div>
+                            <div class="hitl-alert-content">
+                                <div class="hitl-alert-title">Ambiguity / Borderline Signals Triggered LangGraph Interrupt</div>
+                                <div class="hitl-alert-desc" id="hitlBorderlineReasons">
+                                    Sample requires SOC analyst review before finalizing incident report and executing SOAR actions.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="hitl-review-grid">
+                            <div class="hitl-review-item">
+                                <span class="hitl-label">PRELIMINARY VERDICT:</span>
+                                <span class="hitl-value" id="hitlCurrentVerdict">BENIGN</span>
+                            </div>
+                            <div class="hitl-review-item">
+                                <span class="hitl-label">THREAT LEVEL:</span>
+                                <span class="hitl-value" id="hitlThreatLevel">LOW</span>
+                            </div>
+                            <div class="hitl-review-item">
+                                <span class="hitl-label">ML CONFIDENCE:</span>
+                                <span class="hitl-value" id="hitlConfidence">85.0%</span>
+                            </div>
+                        </div>
+
+                        <!-- Decision Controls -->
+                        <div class="hitl-decision-group">
+                            <label class="hitl-group-label">SOC ANALYST ACTION:</label>
+                            <div class="hitl-decision-radios">
+                                <label class="radio-card active" id="labelDecisionApprove">
+                                    <input type="radio" name="analystDecision" value="APPROVE" checked />
+                                    <span class="radio-title">✓ Approve Current Verdict</span>
+                                    <span class="radio-desc">Accept preliminary classification &amp; playbooks</span>
+                                </label>
+                                <label class="radio-card" id="labelDecisionOverride">
+                                    <input type="radio" name="analystDecision" value="OVERRIDE" />
+                                    <span class="radio-title">⚠️ Override Verdict</span>
+                                    <span class="radio-desc">Change verdict &amp; enforce custom playbooks</span>
+                                </label>
+                            </div>
+
+                            <!-- Override Controls (Revealed when Override is selected) -->
+                            <div class="hitl-override-panel hidden" id="hitlOverridePanel">
+                                <div class="hitl-field-row">
+                                    <div class="hitl-field">
+                                        <label for="selectOverrideVerdict">New Final Verdict:</label>
+                                        <select id="selectOverrideVerdict" class="hitl-select">
+                                            <option value="MALICIOUS (Analyst Override)">MALICIOUS (Confirmed Lure / Phish)</option>
+                                            <option value="SUSPICIOUS (Analyst Override)">SUSPICIOUS (High-Risk Anomaly)</option>
+                                            <option value="BENIGN (Analyst Override)">BENIGN (Verified Safe / False Positive)</option>
+                                        </select>
+                                    </div>
+                                    <div class="hitl-field">
+                                        <label for="selectOverrideThreat">New Threat Level:</label>
+                                        <select id="selectOverrideThreat" class="hitl-select">
+                                            <option value="CRITICAL">CRITICAL</option>
+                                            <option value="HIGH" selected>HIGH</option>
+                                            <option value="MEDIUM">MEDIUM</option>
+                                            <option value="LOW">LOW</option>
+                                            <option value="CLEAN">CLEAN</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="hitl-notes-field">
+                                <label for="txtAnalystNotes">Analyst Justification / Verification Notes:</label>
+                                <textarea id="txtAnalystNotes" class="hitl-textarea" placeholder="Explain rationale for approval or override (will be recorded in audit log and executive report)..."></textarea>
+                            </div>
+
+                            <div class="hitl-action-buttons">
+                                <button id="btnResumePipeline" class="btn-primary hitl-btn-resume">
+                                    <span>🚀</span> Submit Decision &amp; Finalize Triage
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Hero Executive Verdict Banner -->
                 <div class="verdict-banner banner-neutral" id="verdictBanner">
                     <div class="verdict-banner-top">

@@ -28,7 +28,12 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from langgraph_pipeline import get_explainphish_graph, run_pipeline
+from langgraph_pipeline import (
+    get_explainphish_graph,
+    get_pipeline_state,
+    resume_pipeline,
+    run_pipeline,
+)
 from inference import FORMAT_DISPLAY
 from llm_engine import get_active_provider_config, chat_with_soc_agent
 from report_exporter import generate_pdf_report, generate_docx_report
@@ -64,10 +69,23 @@ DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 class URLAnalyzeRequest(BaseModel):
     url: str
+    hitl: Optional[bool] = False
+    auto_approve: Optional[bool] = False
 
 
 class SampleAnalyzeRequest(BaseModel):
     sample_path: str
+    hitl: Optional[bool] = False
+    auto_approve: Optional[bool] = False
+
+
+class AnalystResumeRequest(BaseModel):
+    thread_id: str
+    decision: str = "APPROVE"  # "APPROVE" or "OVERRIDE"
+    verdict: Optional[str] = None
+    threat_level: Optional[str] = None
+    notes: Optional[str] = None
+    analyst_id: Optional[str] = "SOC-Analyst-Tier2"
 
 
 class ChatRequest(BaseModel):
@@ -107,6 +125,36 @@ def api_chat(req: ChatRequest):
         "response": reply,
         "provider": get_active_provider_config().get("provider", "ExplainPhish AI"),
     }
+
+
+@app.post("/api/pipeline/resume")
+def api_pipeline_resume(req: AnalystResumeRequest):
+    """Resume an interrupted LangGraph triage workflow with analyst approval or verdict override."""
+    if not req.thread_id:
+        raise HTTPException(status_code=400, detail="Missing required thread_id")
+    try:
+        result = resume_pipeline(
+            thread_id=req.thread_id,
+            analyst_decision={
+                "decision": req.decision,
+                "verdict": req.verdict,
+                "threat_level": req.threat_level,
+                "notes": req.notes,
+                "analyst_id": req.analyst_id or "SOC-Analyst",
+            },
+        )
+        return sanitize_result(result)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to resume pipeline: {str(exc)}")
+
+
+@app.get("/api/pipeline/status/{thread_id}")
+def api_pipeline_status(thread_id: str):
+    """Query state of an active or interrupted LangGraph thread."""
+    st = get_pipeline_state(thread_id)
+    if not st:
+        raise HTTPException(status_code=404, detail=f"Thread '{thread_id}' not found in state store")
+    return sanitize_result(st)
 
 
 @app.post("/api/export/pdf")
@@ -177,8 +225,12 @@ def api_list_samples():
 
 
 @app.post("/api/analyze/file")
-async def api_analyze_file(file: UploadFile = File(...)):
-    """Upload and execute full 7-node LangGraph autonomous triage on file."""
+async def api_analyze_file(
+    file: UploadFile = File(...),
+    hitl: Optional[bool] = False,
+    auto_approve: Optional[bool] = None,
+):
+    """Upload and execute full LangGraph autonomous triage on file with optional HITL."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="Missing filename")
 
@@ -192,7 +244,13 @@ async def api_analyze_file(file: UploadFile = File(...)):
     target_path.write_bytes(content)
 
     try:
-        result = run_pipeline(target_path)
+        is_hitl = bool(hitl)
+        should_auto_approve = auto_approve if auto_approve is not None else (not is_hitl)
+        result = run_pipeline(
+            target_path,
+            enable_hitl=is_hitl,
+            auto_approve=should_auto_approve,
+        )
         clean_result = sanitize_result(result)
         return clean_result
     except Exception as exc:
@@ -254,7 +312,14 @@ def api_analyze_url(req: URLAnalyzeRequest):
     target_path.write_bytes(content)
 
     try:
-        result = run_pipeline(target_path, source_url=raw_url)
+        is_hitl = bool(req.hitl)
+        should_auto_approve = req.auto_approve if req.auto_approve is not None else (not is_hitl)
+        result = run_pipeline(
+            target_path,
+            source_url=raw_url,
+            enable_hitl=is_hitl,
+            auto_approve=should_auto_approve,
+        )
         clean_result = sanitize_result(result)
         return clean_result
     except Exception as exc:
@@ -269,7 +334,13 @@ def api_analyze_sample(req: SampleAnalyzeRequest):
         raise HTTPException(status_code=404, detail="Sample file not found on disk")
 
     try:
-        result = run_pipeline(path)
+        is_hitl = bool(req.hitl)
+        should_auto_approve = req.auto_approve if req.auto_approve is not None else (not is_hitl)
+        result = run_pipeline(
+            path,
+            enable_hitl=is_hitl,
+            auto_approve=should_auto_approve,
+        )
         clean_result = sanitize_result(result)
         return clean_result
     except Exception as exc:
@@ -427,9 +498,19 @@ def generate_inaccessible_domain_triage(raw_url: str, error_detail: str) -> Dict
 
 
 def sanitize_result(res: Dict[str, Any]) -> Dict[str, Any]:
-    """Ensure JSON serializability (convert numpy floats and sanitize keys)."""
+    """Ensure JSON serializability (convert numpy floats, serialize interrupts, and sanitize keys)."""
     out = {}
     for k, v in res.items():
+        if k == "__interrupt__":
+            # Extract interrupt values cleanly into a serializable list
+            clean_ints = []
+            if isinstance(v, (list, tuple)):
+                for item in v:
+                    val = getattr(item, "value", item)
+                    clean_ints.append(val if isinstance(val, dict) else str(val))
+            out["interrupts"] = clean_ints
+            continue
+
         if k in ("raw_features", "standardized_features") and isinstance(v, dict):
             clean_dict = {}
             for fk, fv in v.items():

@@ -28,6 +28,9 @@ from typing import Any, Dict, List, Optional, Tuple, TypedDict
 import numpy as np
 import pandas as pd
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command, interrupt
+from langgraph.checkpoint.memory import InMemorySaver
+import uuid
 
 # Ensure local imports work cleanly
 _HERE = Path(__file__).resolve().parent
@@ -116,6 +119,18 @@ class ExplainPhishState(TypedDict, total=False):
     executive_summary: str
     soc_report_markdown: str
     report_saved_path: Optional[str]
+
+    # Human-in-the-Loop (HITL) & Verification Controls
+    thread_id: str
+    is_interrupted: bool
+    status: str
+    requires_analyst_review: bool
+    analyst_review_pending: bool
+    force_analyst_review: bool
+    auto_approve: bool
+    enable_hitl: bool
+    analyst_review: Dict[str, Any]
+    review_request: Dict[str, Any]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -884,6 +899,139 @@ def node_mitre_mapping(state: ExplainPhishState) -> Dict[str, Any]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Node 6.5: Human-in-the-Loop (HITL) Analyst Verification & Approval
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def node_analyst_review(state: ExplainPhishState) -> Dict[str, Any]:
+    """
+    Human-in-the-Loop (HITL) Verification Node:
+    If sample is borderline or requires analyst verification,
+    pauses execution using LangGraph's interrupt() mechanism
+    so an analyst must approve or adjust the verdict before continuing.
+    """
+    if state.get("error"):
+        return {}
+
+    is_borderline = state.get("is_borderline", False)
+    auto_approve = state.get("auto_approve", False)
+    enable_hitl = state.get("enable_hitl", True)
+    force_review = state.get("force_analyst_review", False)
+
+    # If auto-approve is active, or not borderline and no forced review, or HITL disabled: auto-approve
+    if auto_approve or (not is_borderline and not force_review) or not enable_hitl:
+        rules = dict(state.get("applied_rules") or {})
+        rule_desc = "Rule 6.5 (Analyst Verification): Auto-approved (non-borderline consensus / automated policy)"
+        rules["analyst_review"] = rule_desc
+        return {
+            "analyst_review": {
+                "status": "AUTO_APPROVED",
+                "decision": "APPROVE",
+                "analyst_id": "SYSTEM_POLICY",
+                "notes": "Non-borderline sample auto-approved by policy.",
+                "reviewed_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            },
+            "requires_analyst_review": False,
+            "analyst_review_pending": False,
+            "applied_rules": rules,
+            "applied_rule": rule_desc,
+        }
+
+    # Trigger interrupt for human review
+    review_request = {
+        "type": "ANALYST_VERDICT_REVIEW",
+        "thread_id": state.get("thread_id"),
+        "file_name": state.get("file_name"),
+        "is_borderline": is_borderline,
+        "borderline_reasons": state.get("borderline_reasons", []),
+        "current_verdict": state.get("final_verdict") or state.get("ensemble_verdict"),
+        "threat_level": state.get("threat_level"),
+        "confidence_score": state.get("confidence_score"),
+        "confidence_band": state.get("confidence_band"),
+        "top_risk_drivers": state.get("top_risk_drivers", [])[:5],
+        "indicators_of_compromise": state.get("indicators_of_compromise", [])[:5],
+        "proposed_soar_actions": state.get("soc_playbook_actions", []),
+        "options": ["APPROVE", "OVERRIDE"],
+        "message": "Human analyst verification required. Borderline / ambiguous signals detected.",
+    }
+
+    # CALL INTERRUPT: execution pauses here until resumed via Command(resume=...)
+    analyst_response = interrupt(review_request)
+
+    # --- Resumed from interrupt ---
+    if not isinstance(analyst_response, dict):
+        analyst_response = {"decision": str(analyst_response)}
+
+    decision = str(analyst_response.get("decision", "APPROVE")).upper()
+    analyst_id = analyst_response.get("analyst_id", "SOC-Analyst-Tier2")
+    notes = analyst_response.get("notes", "")
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+    final_verdict = state.get("final_verdict") or state.get("ensemble_verdict", "UNKNOWN")
+    threat_level = state.get("threat_level", "MEDIUM")
+    playbook = list(state.get("soc_playbook_actions") or [])
+
+    updates: Dict[str, Any] = {
+        "requires_analyst_review": False,
+        "analyst_review_pending": False,
+    }
+
+    if decision in ("OVERRIDE", "OVERRIDDEN"):
+        override_verdict = analyst_response.get("verdict") or analyst_response.get("final_verdict")
+        if override_verdict:
+            final_verdict = override_verdict
+            updates["final_verdict"] = final_verdict
+
+        override_threat = analyst_response.get("threat_level")
+        if override_threat:
+            threat_level = override_threat
+            updates["threat_level"] = threat_level
+        elif "MALICIOUS" in final_verdict:
+            threat_level = "HIGH"
+            updates["threat_level"] = threat_level
+        elif "BENIGN" in final_verdict:
+            threat_level = "LOW"
+            updates["threat_level"] = threat_level
+
+        # If overridden, adjust SOAR playbook to match analyst verdict
+        if "MALICIOUS" in final_verdict:
+            playbook.insert(0, {
+                "stage": "Endpoint Containment",
+                "tier": "Tier 1 - Analyst Override Enforcement",
+                "action": f"Immediate host containment enforced per {analyst_id} override: {notes or 'Confirmed malicious lure'}.",
+            })
+            updates["soc_playbook_actions"] = playbook
+        elif "BENIGN" in final_verdict:
+            playbook = [{
+                "stage": "Clearance & Safe Release",
+                "tier": "Tier 1 - Analyst Clearance",
+                "action": f"Classified safe via {analyst_id} override. Release document from quarantine.",
+            }]
+            updates["soc_playbook_actions"] = playbook
+
+    updates["analyst_review"] = {
+        "status": "APPROVED" if decision == "APPROVE" else "OVERRIDDEN",
+        "decision": decision,
+        "analyst_id": analyst_id,
+        "original_verdict": state.get("final_verdict") or state.get("ensemble_verdict"),
+        "final_verdict": final_verdict,
+        "threat_level": threat_level,
+        "notes": notes,
+        "reviewed_at": timestamp,
+    }
+
+    rules = dict(state.get("applied_rules") or {})
+    rule_desc = f"Rule 6.5 (Analyst Verification): Decision {decision} by {analyst_id}"
+    if notes:
+        rule_desc += f" (Note: {notes[:60]})"
+    rules["analyst_review"] = rule_desc
+    updates["applied_rules"] = rules
+    updates["applied_rule"] = rule_desc
+
+    return updates
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Node 7: Cognitive Threat Intelligence & LLM Reasoning
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1073,6 +1221,27 @@ def node_soc_report(state: ExplainPhishState) -> Dict[str, Any]:
             report_lines.append(f"| **{a['stage']}** | `{a['tier']}` | {a['action']} |")
         report_lines.append("")
 
+    # Human-in-the-Loop Analyst Verification & Sign-off
+    analyst_review = state.get("analyst_review", {})
+    if analyst_review:
+        status_str = analyst_review.get("status", "N/A")
+        analyst_id = analyst_review.get("analyst_id", "SOC-Analyst")
+        decision = analyst_review.get("decision", "APPROVE")
+        notes = analyst_review.get("notes", "No additional notes provided.")
+        reviewed_at = analyst_review.get("reviewed_at", timestamp)
+
+        report_lines.extend([
+            "## 7. Human-in-the-Loop (HITL) Analyst Verification",
+            "| Field | Verification Telemetry |",
+            "| :--- | :--- |",
+            f"| **Review Status** | `{status_str}` |",
+            f"| **Analyst Decision** | **`{decision}`** |",
+            f"| **Signed-off By** | `{analyst_id}` |",
+            f"| **Review Timestamp** | `{reviewed_at}` |",
+            f"| **Analyst Justification** | {notes or 'Standard verification sign-off.'} |",
+            "",
+        ])
+
     report_lines.extend([
         "---",
         "*Report automatically generated by ExplainPhish Autonomous Security Agent. For SOC escalations, submit hash to SIEM.*",
@@ -1106,10 +1275,14 @@ def path_safe(name: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def build_explainphish_graph():
+def build_explainphish_graph(checkpointer: Optional[Any] = None):
     """
-    Constructs and compiles the ExplainPhish LangGraph StateGraph.
+    Constructs and compiles the ExplainPhish LangGraph StateGraph
+    with Human-in-the-Loop checkpointer support.
     """
+    if checkpointer is None:
+        checkpointer = InMemorySaver()
+
     builder = StateGraph(ExplainPhishState)
 
     # Add Nodes
@@ -1119,6 +1292,7 @@ def build_explainphish_graph():
     builder.add_node("explainability", node_explainability)
     builder.add_node("deep_threat_analysis", node_deep_threat_analysis)
     builder.add_node("mitre_mapping", node_mitre_mapping)
+    builder.add_node("analyst_review", node_analyst_review)
     builder.add_node("cognitive_triage", node_llm_cognitive_triage)
     builder.add_node("soc_report", node_soc_report)
 
@@ -1140,11 +1314,12 @@ def build_explainphish_graph():
     )
 
     builder.add_edge("deep_threat_analysis", "mitre_mapping")
-    builder.add_edge("mitre_mapping", "cognitive_triage")
+    builder.add_edge("mitre_mapping", "analyst_review")
+    builder.add_edge("analyst_review", "cognitive_triage")
     builder.add_edge("cognitive_triage", "soc_report")
     builder.add_edge("soc_report", END)
 
-    return builder.compile()
+    return builder.compile(checkpointer=checkpointer)
 
 
 # Singleton compiled graph
@@ -1158,14 +1333,86 @@ def get_explainphish_graph():
     return _EXPLAINPHISH_APP
 
 
-def run_pipeline(file_path: str | Path, source_url: Optional[str] = None) -> ExplainPhishState:
+def run_pipeline(
+    file_path: str | Path,
+    source_url: Optional[str] = None,
+    thread_id: Optional[str] = None,
+    auto_approve: bool = False,
+    enable_hitl: bool = True,
+    force_analyst_review: bool = False,
+) -> ExplainPhishState:
     """Convenience function to run the full graph on any file or URL."""
     graph = get_explainphish_graph()
+    actual_thread_id = thread_id or f"ep-{uuid.uuid4().hex[:12]}"
     initial_state: ExplainPhishState = {
         "file_path": str(file_path),
         "source_url": source_url,
+        "thread_id": actual_thread_id,
+        "auto_approve": auto_approve,
+        "enable_hitl": enable_hitl,
+        "force_analyst_review": force_analyst_review,
     }
-    return graph.invoke(initial_state)
+    config = {"configurable": {"thread_id": actual_thread_id}}
+    result = graph.invoke(initial_state, config=config)
+
+    # Check if execution paused on an interrupt()
+    interrupts = result.get("__interrupt__")
+    if interrupts:
+        first_interrupt = interrupts[0]
+        review_val = getattr(first_interrupt, "value", first_interrupt)
+        result["is_interrupted"] = True
+        result["status"] = "AWAITING_ANALYST_APPROVAL"
+        result["analyst_review_pending"] = True
+        result["review_request"] = review_val
+        result["thread_id"] = actual_thread_id
+    else:
+        result["is_interrupted"] = False
+        result["status"] = "COMPLETED"
+        result["thread_id"] = actual_thread_id
+
+    return result
+
+
+def resume_pipeline(
+    thread_id: str,
+    analyst_decision: Dict[str, Any],
+) -> ExplainPhishState:
+    """
+    Resumes an interrupted pipeline execution with the analyst's approval or override.
+    """
+    graph = get_explainphish_graph()
+    config = {"configurable": {"thread_id": thread_id}}
+    result = graph.invoke(Command(resume=analyst_decision), config=config)
+
+    interrupts = result.get("__interrupt__")
+    if interrupts:
+        first_interrupt = interrupts[0]
+        review_val = getattr(first_interrupt, "value", first_interrupt)
+        result["is_interrupted"] = True
+        result["status"] = "AWAITING_ANALYST_APPROVAL"
+        result["analyst_review_pending"] = True
+        result["review_request"] = review_val
+    else:
+        result["is_interrupted"] = False
+        result["status"] = "COMPLETED"
+        result["analyst_review_pending"] = False
+
+    result["thread_id"] = thread_id
+    return result
+
+
+def get_pipeline_state(thread_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieve checkpointed graph state for a given thread."""
+    graph = get_explainphish_graph()
+    config = {"configurable": {"thread_id": thread_id}}
+    state_snapshot = graph.get_state(config)
+    if state_snapshot and state_snapshot.values:
+        val = dict(state_snapshot.values)
+        val["thread_id"] = thread_id
+        val["next_nodes"] = list(state_snapshot.next)
+        val["is_interrupted"] = len(state_snapshot.next) > 0 and bool(state_snapshot.tasks and any(t.interrupts for t in state_snapshot.tasks))
+        return val
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
