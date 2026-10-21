@@ -27,9 +27,9 @@ build/
 Thumbs.db
 
 # Colab nested run artifacts
-googleCollab/InterfaceExplainPhish/
-googleCollab/googleCollab/
-googleCollab/output/
+trainingModel/InterfaceExplainPhish/
+trainingModel/googleCollab/
+trainingModel/output/
 
 # Live fetched analysis downloads
 InterfaceExplainPhish/downloads/
