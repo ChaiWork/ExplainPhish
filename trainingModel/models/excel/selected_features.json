@@ -1,11 +1,12 @@
 [
   "entropy_of_text",
+  "macro_chr_count",
   "macro_vocab_size",
-  "macro_max_line_length",
-  "macro_token_count",
   "macro_arithmetic_operator_count",
+  "macro_token_count",
+  "macro_max_line_length",
+  "remote_template_present",
   "numeric_cell_count",
   "string_cell_count",
-  "remote_template_present",
   "avg_cell_length"
 ]

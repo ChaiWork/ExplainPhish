@@ -1444,16 +1444,9 @@ def main():
             sys.exit(1)
 
         print(f"[*] Fetching live web resource from: {source_url}...")
-        req = urllib.request.Request(
-            source_url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            },
-        )
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                content = resp.read()
-                content_type = resp.headers.get("Content-Type", "")
+            from web_app import fetch_remote_resource
+            content, content_type = fetch_remote_resource(source_url, timeout=20)
         except Exception as exc:
             print(f"Error fetching URL '{source_url}': {exc}", file=sys.stderr)
             sys.exit(1)

@@ -1,35 +1,70 @@
 {
   "format": "pdf",
   "models": [
+    "neural_network_mlp",
     "random_forest",
     "decision_tree",
-    "neural_network_mlp",
     "xgboost",
     "lightgbm"
   ],
   "n_features": 10,
   "features": [
     "text_length",
-    "object_count",
-    "file_size",
-    "metadata_size",
-    "title_chars",
     "total_filters",
-    "entropy_of_streams",
+    "title_chars",
+    "file_size",
+    "object_count",
     "stream_count",
     "endstream_count",
-    "valid_pdf_header"
+    "metadata_size",
+    "valid_pdf_header",
+    "entropy_of_streams"
   ],
-  "best_rf_params": {
-    "n_estimators": 200,
-    "min_samples_split": 5,
-    "min_samples_leaf": 2,
-    "max_features": "log2",
-    "max_depth": null
+  "best_model": "LightGBM",
+  "best_hyperparameters": {
+    "Neural Network (MLP)": {
+      "solver": "adam",
+      "learning_rate_init": 0.005,
+      "hidden_layer_sizes": [
+        128,
+        64
+      ],
+      "alpha": 0.0001,
+      "activation": "tanh"
+    },
+    "Random Forest": {
+      "n_estimators": 100,
+      "min_samples_split": 2,
+      "min_samples_leaf": 4,
+      "max_features": "sqrt",
+      "max_depth": 16
+    },
+    "Decision Tree": {
+      "min_samples_split": 10,
+      "min_samples_leaf": 4,
+      "max_depth": 12,
+      "criterion": "entropy"
+    },
+    "XGBoost": {
+      "subsample": 1.0,
+      "n_estimators": 200,
+      "max_depth": 6,
+      "learning_rate": 0.08,
+      "colsample_bytree": 1.0
+    },
+    "LightGBM": {
+      "subsample": 1.0,
+      "num_leaves": 31,
+      "n_estimators": 200,
+      "max_depth": -1,
+      "learning_rate": 0.15
+    }
   },
   "test_metrics": {
-    "roc_auc": 0.9993,
-    "accuracy": 0.9959,
-    "f1": 0.996
+    "accuracy": 0.9974093264248705,
+    "precision": 0.9989969909729187,
+    "recall": 0.996,
+    "f1": 0.9974962443665498,
+    "roc_auc": 0.9995711021505376
   }
 }

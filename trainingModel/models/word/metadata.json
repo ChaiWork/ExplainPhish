@@ -1,12 +1,11 @@
 {
   "format": "word",
   "models": [
+    "neural_network_mlp",
     "random_forest",
     "decision_tree",
-    "neural_network_mlp",
     "xgboost",
-    "lightgbm",
-    "logistic_regression"
+    "lightgbm"
   ],
   "n_features": 10,
   "features": [
@@ -21,16 +20,51 @@
     "path_/a-accent6",
     "struct_name"
   ],
-  "best_rf_params": {
-    "n_estimators": 150,
-    "min_samples_split": 10,
-    "min_samples_leaf": 2,
-    "max_features": 0.5,
-    "max_depth": 8
+  "best_model": "Neural Network (MLP)",
+  "best_hyperparameters": {
+    "Neural Network (MLP)": {
+      "solver": "sgd",
+      "learning_rate_init": 0.01,
+      "hidden_layer_sizes": [
+        64,
+        32
+      ],
+      "alpha": 0.001,
+      "activation": "tanh"
+    },
+    "Random Forest": {
+      "n_estimators": 100,
+      "min_samples_split": 10,
+      "min_samples_leaf": 4,
+      "max_features": "log2",
+      "max_depth": 12
+    },
+    "Decision Tree": {
+      "min_samples_split": 5,
+      "min_samples_leaf": 2,
+      "max_depth": 6,
+      "criterion": "gini"
+    },
+    "XGBoost": {
+      "subsample": 0.8,
+      "n_estimators": 200,
+      "max_depth": 6,
+      "learning_rate": 0.03,
+      "colsample_bytree": 0.8
+    },
+    "LightGBM": {
+      "subsample": 1.0,
+      "num_leaves": 31,
+      "n_estimators": 100,
+      "max_depth": -1,
+      "learning_rate": 0.15
+    }
   },
   "test_metrics": {
-    "roc_auc": 0.9997,
-    "accuracy": 0.9996,
-    "f1": 0.9996
+    "accuracy": 0.9995,
+    "precision": 0.999000999000999,
+    "recall": 1.0,
+    "f1": 0.9995002498750625,
+    "roc_auc": 0.99968475
   }
 }

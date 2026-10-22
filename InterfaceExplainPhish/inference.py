@@ -194,6 +194,7 @@ def load_model_bundle(fmt: str) -> Dict[str, Any]:
     candidates = [
         _HERE / "models" / fmt,
         _HERE.parent / "models" / fmt,
+        _HERE.parent / "trainingModel" / "models" / fmt,
         _HERE.parent / "googleCollab" / "models" / fmt,
     ]
 

@@ -33,7 +33,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from InterfaceExplainPhish.web_app import app, sanitize_result
+from InterfaceExplainPhish.web_app import app, fetch_remote_resource, sanitize_result
 
 
 @pytest.fixture(scope="session")
@@ -214,6 +214,68 @@ class TestURLAnalysisAndSecurity:
             data = response.json()
             assert "final_verdict" in data
             assert "source_url" in data or "file_name" in data
+
+    def test_fetch_remote_resource_ssl_cert_error_fallback_to_unverified(self):
+        """Regression test for SSL certificate failure (e.g. unable to get local issuer certificate).
+        Verifies that fetch_remote_resource gracefully falls back to unverified context and succeeds."""
+        import ssl
+        import urllib.error
+
+        mock_verified_fail = urllib.error.URLError(
+            ssl.SSLCertVerificationError(
+                1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1000)"
+            )
+        )
+        mock_success_response = MagicMock()
+        mock_success_response.read.return_value = b"<html><title>Intel Verified Test</title></html>"
+        mock_success_response.headers.get.return_value = "text/html; charset=utf-8"
+        mock_success_response.__enter__.return_value = mock_success_response
+
+        # First call fails with SSL verification error, second call (unverified context) succeeds
+        with patch("urllib.request.urlopen", side_effect=[mock_verified_fail, mock_success_response]) as mock_urlopen:
+            content, ctype = fetch_remote_resource("https://www.intel.com/content/www/us/en/homepage.html")
+            assert b"Intel Verified Test" in content
+            assert "text/html" in ctype
+            assert mock_urlopen.call_count >= 2
+
+    def test_fetch_remote_resource_waf_403_adaptive_user_agent(self):
+        """Regression test for CDN/WAF blocking browser UA with 403 Forbidden due to TLS fingerprint mismatch.
+        Verifies adaptive UA rotation to scanner/curl UA."""
+        import urllib.error
+
+        # First UA fails with 403 Forbidden
+        mock_http_403 = urllib.error.HTTPError(
+            url="https://www.intel.com/homepage.html",
+            code=403,
+            msg="Forbidden",
+            hdrs={},
+            fp=io.BytesIO(b"<title>Access Denied</title>"),
+        )
+        mock_success_response = MagicMock()
+        mock_success_response.read.return_value = b"<html><title>Intel Homepage Live</title></html>"
+        mock_success_response.headers.get.return_value = "text/html; charset=utf-8"
+        mock_success_response.__enter__.return_value = mock_success_response
+
+        with patch("urllib.request.urlopen", side_effect=[mock_http_403, mock_success_response]) as mock_urlopen:
+            content, ctype = fetch_remote_resource("https://www.intel.com/content/www/us/en/homepage.html")
+            assert b"Intel Homepage Live" in content
+            assert mock_urlopen.call_count >= 2
+
+    def test_fetch_remote_resource_invalid_url_raises(self):
+        """Boundary test: invalid URL strings must raise ValueError."""
+        with pytest.raises(ValueError):
+            fetch_remote_resource("")
+        with pytest.raises(ValueError):
+            fetch_remote_resource("not-a-valid-url")
+
+    def test_fetch_remote_resource_network_unreachable_reraises(self):
+        """Error handling test: DNS / connection refused must be raised to trigger dead-domain triage."""
+        import urllib.error
+
+        dns_error = urllib.error.URLError("[Errno 11001] getaddrinfo failed")
+        with patch("urllib.request.urlopen", side_effect=dns_error):
+            with pytest.raises(urllib.error.URLError):
+                fetch_remote_resource("https://unreachable-host-999.xyz")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
