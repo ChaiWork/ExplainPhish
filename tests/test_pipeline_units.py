@@ -216,3 +216,24 @@ class TestGraphCompilationAndExecution:
         assert "confidence_score" in result
         assert "soc_report_markdown" in result
         assert len(result["soc_report_markdown"]) > 100
+
+    def test_run_pipeline_weaponized_pdf_triggers_forensic_override(self):
+        """Weaponized PDF with embedded /JavaScript or /OpenAction must be upgraded to MALICIOUS."""
+        malicious_pdf = SAMPLE_DIR / "pmalicios_pdf" / "sample_04623.pdf"
+        if not malicious_pdf.exists():
+            malicious_pdf = next(SAMPLE_DIR.glob("pmalicios_pdf/*.pdf"), None)
+        if not malicious_pdf:
+            pytest.skip("No sample malicious PDF found")
+
+        result = langgraph_pipeline.run_pipeline(
+            malicious_pdf,
+            enable_hitl=False,
+            auto_approve=True,
+        )
+        assert result is not None
+        assert "MALICIOUS" in result["final_verdict"]
+        assert result["threat_level"] in ("HIGH", "CRITICAL")
+        if "deep_analysis" in result and result["deep_analysis"]:
+            assert result["deep_analysis"]["verdict_adjustment"] in ("UPGRADE_TO_MALICIOUS", "NONE")
+        assert any(t["id"] == "T1566.001" for t in result.get("mitre_tactics", []))
+        assert len(result.get("soc_playbook_actions", [])) > 0

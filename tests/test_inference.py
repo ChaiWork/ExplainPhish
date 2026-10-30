@@ -253,3 +253,28 @@ class TestRunInference:
         """Missing input file raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError):
             inference.run_inference(tmp_path / "ghost.pdf", fmt="pdf")
+
+    def test_standardize_features_log1p_transformation(self):
+        """Skewed count features (e.g. file_size) must be log1p transformed to avoid z-score explosion."""
+        bundle = inference.load_model_bundle("pdf")
+        sel_features = bundle["selected_features"]
+        # Raw file_size of 243,792 bytes
+        raw = {k: 10.0 for k in sel_features}
+        raw["file_size"] = 243792.0
+
+        sample_std, std_dict = inference.standardize_features(raw, sel_features, bundle["scaler"], fmt="pdf")
+        # With log1p(243792) = ~12.4, z-score is around (12.4 - 10.19) / 1.27 = ~1.74
+        assert "file_size" in std_dict
+        assert abs(std_dict["file_size"]) < 10.0, f"Z-score exploded: {std_dict['file_size']}"
+
+    def test_run_inference_malicious_pdf_verdict(self):
+        """Malicious sample PDF must be classified as MALICIOUS by the ensemble."""
+        malicious_pdf = SAMPLE_DIR / "pmalicios_pdf" / "sample_04623.pdf"
+        if not malicious_pdf.exists():
+            malicious_pdf = next(SAMPLE_DIR.glob("pmalicios_pdf/*.pdf"), None)
+        if not malicious_pdf:
+            pytest.skip("No sample malicious PDF found")
+
+        res = inference.run_inference(malicious_pdf, fmt="pdf")
+        assert res["vote"]["verdict"] == "MALICIOUS"
+        assert res["vote"]["confidence"] > 0.70

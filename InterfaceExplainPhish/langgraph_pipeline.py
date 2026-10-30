@@ -256,7 +256,7 @@ def node_ml_ensemble(state: ExplainPhishState) -> Dict[str, Any]:
     selected_features = bundle["selected_features"]
     scaler = bundle["scaler"]
 
-    sample_std, std_dict = standardize_features(raw_feats, selected_features, scaler)
+    sample_std, std_dict = standardize_features(raw_feats, selected_features, scaler, fmt=fmt)
 
     # 5-Model architecture registry identical to predict.py / inference.py
     model_registry: List[Tuple[str, Any]] = [
@@ -359,10 +359,16 @@ def node_ml_ensemble(state: ExplainPhishState) -> Dict[str, Any]:
         except Exception:
             pass
     elif fmt == "pdf":
-        js_count = raw_feats.get("js_count", raw_feats.get("javascript_count", 0))
-        open_action = raw_feats.get("open_action_count", 0)
-        if ensemble_verdict == "BENIGN" and (js_count > 0 or open_action > 0):
-            borderline_reasons.append("Benign ML vote but PDF contains active JavaScript or OpenAction triggers")
+        try:
+            raw_pdf = path.read_bytes()
+            has_js = b"/JavaScript" in raw_pdf or b"/JS" in raw_pdf
+            has_openaction = b"/OpenAction" in raw_pdf or b"/AA" in raw_pdf
+            has_launch = b"/Launch" in raw_pdf
+            has_embedded = b"/EmbeddedFiles" in raw_pdf
+            if ensemble_verdict == "BENIGN" and (has_js or has_openaction or has_launch or has_embedded):
+                borderline_reasons.append("Benign ML vote but PDF contains active execution triggers (/JavaScript, /OpenAction, or /Launch)")
+        except Exception:
+            pass
 
     is_borderline = len(borderline_reasons) > 0
 
@@ -538,12 +544,21 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
                 iocs.append({"type": "PDF Action", "value": "/Launch"})
             # 2. PDF /JavaScript or /JS
             if b"/JavaScript" in raw_pdf or b"/JS" in raw_pdf:
-                deep_findings["indicators"].append("PDF embedded JavaScript action detected")
+                deep_findings["indicators"].append("PDF /JavaScript action detected: embedded script execution routine")
                 iocs.append({"type": "PDF Action", "value": "/JavaScript"})
-            # 3. PDF /OpenAction
+            # 3. PDF /OpenAction or /AA
             if b"/OpenAction" in raw_pdf or b"/AA" in raw_pdf:
-                deep_findings["indicators"].append("PDF /OpenAction / AdditionalActions detected: executes upon file opening")
-            # 4. Embedded URIs
+                is_weaponized = bool(re.search(rb'/OpenAction\s*<<[^>]*(?:/S\s*/(?:JavaScript|Launch|URI)|/JS)', raw_pdf, re.DOTALL))
+                if is_weaponized or b"/JavaScript" in raw_pdf or b"/JS" in raw_pdf or b"/Launch" in raw_pdf:
+                    deep_findings["indicators"].append("PDF weaponized /OpenAction trigger: executes payload upon document opening")
+                    iocs.append({"type": "PDF Action", "value": "/OpenAction"})
+                else:
+                    deep_findings["indicators"].append("PDF /OpenAction view configuration detected")
+            # 4. Embedded Files
+            if b"/EmbeddedFiles" in raw_pdf:
+                deep_findings["indicators"].append("PDF /EmbeddedFiles detected: embedded binary attachment payload")
+                iocs.append({"type": "PDF Payload", "value": "/EmbeddedFiles"})
+            # 5. Embedded URIs
             pdf_uris = re.findall(rb'/URI\s*\((https?://[^)]+)\)', raw_pdf)
             for u in pdf_uris[:5]:
                 decoded_u = u.decode("latin1", errors="ignore")
@@ -677,11 +692,17 @@ def node_deep_threat_analysis(state: ExplainPhishState) -> Dict[str, Any]:
                     "and zero stealth hidden iframes. Calibrated safe."
                 )
     elif fmt == "pdf":
-        has_exec = any("/Launch" in i or "/JavaScript" in i for i in deep_findings["indicators"])
+        has_exec = any(
+            "/Launch" in i or "JavaScript" in i or "weaponized" in i or "/EmbeddedFiles" in i
+            for i in deep_findings["indicators"]
+        )
         if has_exec and original_verdict == "BENIGN":
             final_verdict = "MALICIOUS (Active PDF Payload Detected)"
             deep_findings["verdict_adjustment"] = "UPGRADE_TO_MALICIOUS"
-            deep_findings["rationale"] = "Unsafe PDF execution triggers (/Launch or /JavaScript) confirmed."
+            deep_findings["rationale"] = (
+                "ML model returned benign probability based on generic document statistics, "
+                f"but deep forensic inspection confirmed active execution triggers: {', '.join(deep_findings['indicators'])}."
+            )
 
     rules = dict(state.get("applied_rules") or {})
     if deep_findings.get("verdict_adjustment") == "DOWNGRADE_TO_BENIGN":

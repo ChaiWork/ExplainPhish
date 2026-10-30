@@ -277,17 +277,50 @@ def extract_features(file_path: Path, fmt: str) -> Dict[str, Any]:
     return extract(file_path)
 
 
+# Skewed count features that require variance-stabilizing log1p transformation,
+# matching the exact training pipelines in trainingModel notebooks.
+SKEWED_FEATURES_BY_FORMAT: Dict[str, set[str]] = {
+    "pdf": {
+        "stream_count", "object_count", "file_size", "text_length",
+        "title_chars", "endstream_count", "metadata_size", "total_filters",
+    },
+    "word": {
+        "struct_pos", "path_a-hlink", "struct_ang", "path_a-alpha", "struct_name",
+    },
+    "excel": {
+        "macro_token_count", "macro_max_line_length", "macro_vocab_size",
+        "macro_chr_count", "macro_arithmetic_operator_count",
+        "numeric_cell_count", "string_cell_count", "avg_cell_length",
+    },
+    "html": {
+        "url_punct_char_count", "min_link_length", "url_digit_count",
+        "total_script_characters", "external_link_count", "tag_count",
+        "internal_link_count", "form_count",
+    },
+}
+ALL_SKEWED_FEATURES: set[str] = set().union(*SKEWED_FEATURES_BY_FORMAT.values())
+
+
 def standardize_features(
     raw_features: Dict[str, Any],
     selected_features: List[str],
     scaler: Any,
+    fmt: Optional[str] = None,
 ) -> Tuple[np.ndarray, Dict[str, float]]:
     """
     Standardize raw features using the pre-fitted StandardScaler.
-    Applies defensive zero imputation and preserves exact feature ordering.
+    Applies log1p variance-stabilizing transform to skewed count features
+    (matching training pipelines in trainingModel), defensive zero imputation,
+    and preserves exact feature ordering.
     """
     df_sample = pd.DataFrame([raw_features])
-    
+
+    # Apply log1p transformation to skewed count features as done in training notebooks
+    skewed_targets = SKEWED_FEATURES_BY_FORMAT.get(fmt.lower(), ALL_SKEWED_FEATURES) if fmt else ALL_SKEWED_FEATURES
+    for col in selected_features:
+        if col in df_sample.columns and col in skewed_targets:
+            df_sample[col] = np.log1p(df_sample[col].clip(lower=0.0))
+
     # Ensure all selected features exist, fill missing with 0
     for col in selected_features:
         if col not in df_sample.columns:
@@ -297,7 +330,7 @@ def standardize_features(
 
     # Standardize values: z = (x - mu) / sigma
     sample_std_arr = scaler.transform(df_sample.values)
-    
+
     std_dict = {
         col: float(sample_std_arr[0, idx])
         for idx, col in enumerate(selected_features)
@@ -815,7 +848,7 @@ def run_inference(
     raw_features = extract_features(path, fmt)
 
     # 3. Standardize features
-    sample_std, std_dict = standardize_features(raw_features, selected_features, scaler)
+    sample_std, std_dict = standardize_features(raw_features, selected_features, scaler, fmt=fmt)
 
     # 4. Multi-model predictions across the 5 voting architectures
     model_registry: List[Tuple[str, Any]] = [
